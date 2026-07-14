@@ -103,14 +103,9 @@ castellatedMeshControls
         }
     }
 
-    locationsInMesh
+    insidePoints
     (
-        ((5.0 2.0 2.0) air) // External air
-        ((0.0 0.05 0.0) innerAir) // Air gap between heater and cylinder
-        ((0.0 0.0 0.0) heater) // Explicitly locating inside the heater
-        ((0.0 0.0745 0.0) cylinder) // Explicitly locating inside the cylinder wall (between 74.1mm and 75mm)
-        ((0.0 0.0 0.281) glass) // Inside the top glass disk
-        ((0.0 0.0 -0.281) glass) // Inside the bottom glass disk
+        (5.0 2.0 2.0)
     );
     allowFreeStandingZoneFaces true;
 }
