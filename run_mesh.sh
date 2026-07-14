@@ -5,7 +5,7 @@ echo "Generating base mesh with blockMesh..."
 blockMesh
 
 echo "Extracting surface features..."
-surfaceFeatureExtract
+surfaceFeatures
 
 echo "Running snappyHexMesh for multi-region..."
 snappyHexMesh -overwrite

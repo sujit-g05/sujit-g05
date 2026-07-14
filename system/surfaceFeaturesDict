@@ -9,38 +9,23 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    object      surfaceFeatureExtractDict;
+    object      surfaceFeaturesDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 cylinder.stl
 {
-    extractionMethod    extractFromSurface;
-    extractFromSurfaceCoeffs
-    {
-        includedAngle   150;
-    }
-    writeObj            yes;
+    includedAngle   150;
 }
 
 heater.stl
 {
-    extractionMethod    extractFromSurface;
-    extractFromSurfaceCoeffs
-    {
-        includedAngle   150;
-    }
-    writeObj            yes;
+    includedAngle   150;
 }
 
 glass.stl
 {
-    extractionMethod    extractFromSurface;
-    extractFromSurfaceCoeffs
-    {
-        includedAngle   150;
-    }
-    writeObj            yes;
+    includedAngle   150;
 }
 
 // ************************************************************************* //
