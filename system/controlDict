@@ -14,34 +14,33 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     chtMultiRegionFoam;
+application     foamMultiRun;
 
 startFrom       startTime;
-
 startTime       0;
-
 stopAt          endTime;
-
 endTime         10;
-
 deltaT          0.01;
-
 writeControl    timeStep;
-
 writeInterval   10;
-
 purgeWrite      0;
-
 writeFormat     ascii;
-
 writePrecision  6;
-
 writeCompression off;
-
 timeFormat      general;
-
 timePrecision   6;
-
 runTimeModifiable true;
+
+modules
+(
+    fluid
+    {
+        regions (air innerAir);
+    }
+    solid
+    {
+        regions (cylinder heater glass);
+    }
+);
 
 // ************************************************************************* //

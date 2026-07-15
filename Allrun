@@ -1,0 +1,37 @@
+#!/bin/sh
+
+echo "Cleaning up..."
+rm -rf 0
+rm -rf constant/polyMesh system/polyMesh
+rm -rf constant/air constant/innerAir constant/cylinder constant/heater constant/glass
+
+echo "Generating geometry..."
+python generate_stls.py
+
+echo "Generating generic case dictionaries..."
+python generate_all_case_files.py
+
+echo "Running blockMesh..."
+blockMesh
+
+echo "Extracting surface features..."
+surfaceFeatures
+
+echo "Running snappyHexMesh..."
+snappyHexMesh -overwrite
+
+echo "Defining fluid cell zones..."
+topoSet
+
+echo "Splitting mesh by regions..."
+splitMeshRegions -cellZones -overwrite
+
+echo "Setting up initial conditions..."
+cp -r 0.orig 0
+
+echo "Applying changeDictionary to setup coupled multi-region boundaries..."
+for region in air innerAir cylinder heater glass; do
+    changeDictionary -region $region
+done
+
+echo "Case setup complete. You can now run foamMultiRun."

@@ -37,6 +37,12 @@ geometry
         file "glass.stl";
         name glass;
     }
+    # innerAir is enclosed by cylinder and glass. We don't necessarily need a separate STL
+    # if we seed it properly, but OpenFOAM's splitMeshRegions with -cellZones uses the cellZones from sHM.
+    # To zone innerAir, let's use the cylinder and glass to define a closed volume if possible.
+    # Wait, if we use the same surface for two zones, it's tricky.
+    # A cleaner way is to let splitMeshRegions detect disconnected regions.
+    # But sHM assigns all unassigned cells to the 'air' region by default (since no cellZone is specified for the background mesh, it becomes domain0, then renamed).
 }
 
 castellatedMeshControls
@@ -63,6 +69,7 @@ castellatedMeshControls
             faceZone cylinder;
             cellZone cylinder;
             cellZoneInside inside;
+            insidePoint (0.0 0.0745 0.0);
         }
         heater
         {
@@ -71,6 +78,7 @@ castellatedMeshControls
             faceZone heater;
             cellZone heater;
             cellZoneInside inside;
+            insidePoint (0.0 0.0 0.0);
         }
         glass
         {
@@ -79,6 +87,7 @@ castellatedMeshControls
             faceZone glass;
             cellZone glass;
             cellZoneInside inside;
+            insidePoints ((0.281 0.0 0.0) (-0.281 0.0 0.0));
         }
     }
 
@@ -105,7 +114,7 @@ castellatedMeshControls
 
     insidePoints
     (
-        (5.0 2.0 2.0)
+        (0.0 2.0 2.0)   // External air (outside cylinder)
     );
     allowFreeStandingZoneFaces true;
 }

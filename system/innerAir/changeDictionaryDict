@@ -1,0 +1,100 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/innerAir";
+    object      changeDictionaryDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dictionaryReplacement
+{
+    T
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            compressible::turbulentTemperatureCoupledBaffleMixed;
+                Tnbr            T;
+                kappaMethod     fluidThermo;
+                value           uniform 300;
+            }
+        }
+    }
+
+    U
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            noSlip;
+            }
+        }
+    }
+    p_rgh
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            fixedFluxPressure;
+                value           uniform 100000;
+            }
+        }
+    }
+    k
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            kqRWallFunction;
+                value           uniform 0.1;
+            }
+        }
+    }
+    epsilon
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            epsilonWallFunction;
+                value           uniform 0.01;
+            }
+        }
+    }
+    nut
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            nutkWallFunction;
+                value           uniform 0;
+            }
+        }
+    }
+    alphat
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            alphatJayatillekeWallFunction;
+                value           uniform 0;
+            }
+        }
+    }
+}
+// ************************************************************************* //

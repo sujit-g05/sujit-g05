@@ -23,31 +23,30 @@ heater_radius = np.sqrt(heater_volume / (np.pi * heater_length))
 
 # Generate Heater (solid cylinder at origin)
 heater = trimesh.creation.cylinder(radius=heater_radius, height=heater_length, sections=100)
-# Orient it along Z axis for simplicity (or X axis, standard openfoam often X flow, let's keep cylinder along Z and flow along X)
-# Actually, the problem statement says "cylinder is placed at the center of the domain"
-# Let's orient cylinder along Z axis. Flow is along X axis.
+# Orient along X axis to match the long dimension of blockMesh
+rot_matrix = trimesh.transformations.rotation_matrix(np.pi/2, [0, 1, 0])
+heater.apply_transform(rot_matrix)
 heater.export('constant/triSurface/heater.stl', file_type='stl_ascii')
 
 # Generate Hollow Cylinder
-# A hollow cylinder is made by creating outer and inner walls, and top/bottom rings.
-# We can create this using trimesh.creation.annulus
-cylinder = trimesh.creation.annulus(r_min=cyl_inner_radius, r_max=cyl_outer_radius, height=cyl_length, sections=100)
-# Center it at origin
+
+# In trimesh >= 4.0, annulus directly creates a 3D volume if height is passed
+cylinder = trimesh.creation.annulus(r_min=cyl_inner_radius, r_max=cyl_outer_radius, height=cyl_length)
+
+cylinder.apply_transform(rot_matrix)
 cylinder.export('constant/triSurface/cylinder.stl', file_type='stl_ascii')
 
 # Generate Borosilicate glass disks
-# These close the two sides of the hollow cylinder.
-# So they are solid disks of radius = cyl_outer_radius (or maybe just cyl_inner_radius? Let's assume they cover the whole outer diameter)
-# The problem says "two sides are closed with borosilicate glass disk".
-# We'll make them 2mm thick for realism (since thickness isn't explicitly given).
 glass_thickness = 2e-3
 glass1 = trimesh.creation.cylinder(radius=cyl_outer_radius, height=glass_thickness, sections=100)
-# Move glass1 to one end of the cylinder
+# Move glass1 to one end of the cylinder (along Z before rotation, so translate along Z then rotate)
 glass1.apply_translation([0, 0, cyl_length/2 + glass_thickness/2])
+glass1.apply_transform(rot_matrix)
 
 glass2 = trimesh.creation.cylinder(radius=cyl_outer_radius, height=glass_thickness, sections=100)
 # Move glass2 to the other end
 glass2.apply_translation([0, 0, -(cyl_length/2 + glass_thickness/2)])
+glass2.apply_transform(rot_matrix)
 
 # Combine both glasses into one STL for meshing simplicity, or keep separate
 glass_combined = trimesh.util.concatenate([glass1, glass2])
