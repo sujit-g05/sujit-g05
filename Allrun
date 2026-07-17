@@ -1,15 +1,17 @@
 #!/bin/sh
+. ${WM_PROJECT_DIR:-/opt/openfoam13}/bin/tools/RunFunctions 2>/dev/null || true
 
 echo "Cleaning up..."
 rm -rf 0
 rm -rf constant/polyMesh system/polyMesh
-rm -rf constant/air constant/innerAir constant/cylinder constant/heater constant/glass
+rm -rf constant/air/polyMesh constant/cylinder/polyMesh constant/heater/polyMesh constant/glass/polyMesh
+
+
+echo "Checking Python dependencies for geometry generation..."
+python3 -c "import trimesh; import numpy" 2>/dev/null || { echo "Installing required Python packages..."; pip install trimesh numpy; }
 
 echo "Generating geometry..."
 python generate_stls.py
-
-echo "Generating generic case dictionaries..."
-python generate_all_case_files.py
 
 echo "Running blockMesh..."
 blockMesh
@@ -23,15 +25,24 @@ snappyHexMesh -overwrite
 echo "Defining fluid cell zones..."
 topoSet
 
-echo "Splitting mesh by regions..."
-splitMeshRegions -cellZones -overwrite
-
 echo "Setting up initial conditions..."
 cp -r 0.orig 0
 
+echo "Splitting mesh by regions..."
+splitMeshRegions -cellZones -overwrite
+
+# OpenFOAM v13 splitMeshRegions automatically configures the coupled mapped boundary conditions in the 0/ region directories.
+
+
 echo "Applying changeDictionary to setup coupled multi-region boundaries..."
-for region in air innerAir cylinder heater glass; do
+for region in air cylinder heater glass; do
     changeDictionary -region $region
 done
 
 echo "Case setup complete. You can now run foamMultiRun."
+
+echo "Setting up post-processing..."
+# Create dummy files for ParaView to easily open the regions
+paraFoam -touchAll
+echo "Post-processing files created. After running the simulation, open the .OpenFOAM files in ParaView."
+echo "To view residual graphs while running, you can use: foamMonitor -l postProcessing/residuals/0/residuals.dat"

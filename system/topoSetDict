@@ -1,14 +1,16 @@
 /*--------------------------------*- C++ -*----------------------------------*\
-  =========                 |
-  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
-   \\    /   O peration     | Website:  https://openfoam.org
-    \\  /    A nd           | Version:  13
-     \\/     M anipulation  |
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
 FoamFile
 {
+    version     2.0;
     format      ascii;
     class       dictionary;
+    location    "system";
     object      topoSetDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -16,50 +18,12 @@ FoamFile
 actions
 (
     {
-        name    allCells;
+        name    air;
         type    cellSet;
         action  new;
         source  boxToCell;
         box     (-20 -20 -20) (20 20 20);
     }
-
-    // We want to isolate innerAir. It lies within a cylinder along the X axis.
-    {
-        name    innerAir;
-        type    cellSet;
-        action  new;
-        source  cylinderToCell;
-        p1      (-0.279 0 0); // slightly inside glass
-        p2      (0.279 0 0);
-        radius  0.074;
-    }
-
-    // However, the heater is also inside this radius. So we must remove heater cells.
-    {
-        name    innerAir;
-        type    cellSet;
-        action  delete;
-        source  zoneToCell;
-        zone    heater;
-    }
-
-    {
-        name    innerAir;
-        type    cellZoneSet;
-        action  new;
-        source  setToCellZone;
-        set     innerAir;
-    }
-
-    // Now for outer air
-    {
-        name    air;
-        type    cellSet;
-        action  new;
-        source  boxToCell;
-        box     (-20 -20 -20) (20 20 20); // Select everything
-    }
-    // Remove all defined zones
     {
         name    air;
         type    cellSet;
@@ -80,13 +44,6 @@ actions
         action  delete;
         source  zoneToCell;
         zone    glass;
-    }
-    {
-        name    air;
-        type    cellSet;
-        action  delete;
-        source  setToCell;
-        set     innerAir;
     }
     {
         name    air;

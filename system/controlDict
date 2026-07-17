@@ -35,7 +35,7 @@ modules
 (
     fluid
     {
-        regions (air innerAir);
+        regions (air);
     }
     solid
     {
@@ -43,4 +43,31 @@ modules
     }
 );
 
+functions
+{
+    // Monitor maximum temperature in the heater
+    maxT_heater
+    {
+        type            volFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        log             true;
+        writeControl    timeStep;
+        writeInterval   1;
+        region          heater;
+        operation       max;
+        fields          (T);
+    }
+
+
+
+    // Add residual plotting data (so the user can plot graphs using foamMonitor)
+    residuals
+    {
+        type            residuals;
+        libs            ("libutilityFunctionObjects.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        fields          (U p T k epsilon);
+    }
+}
 // ************************************************************************* //

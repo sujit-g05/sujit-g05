@@ -87,7 +87,7 @@ castellatedMeshControls
             faceZone glass;
             cellZone glass;
             cellZoneInside inside;
-            insidePoints ((0.281 0.0 0.0) (-0.281 0.0 0.0));
+            insidePoints ((0.281 0.05 0.0) (-0.281 0.05 0.0));
         }
     }
 
@@ -115,6 +115,7 @@ castellatedMeshControls
     insidePoints
     (
         (0.0 2.0 2.0)   // External air (outside cylinder)
+
     );
     allowFreeStandingZoneFaces true;
 }

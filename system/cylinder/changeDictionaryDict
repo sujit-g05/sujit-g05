@@ -17,18 +17,27 @@ FoamFile
 
 dictionaryReplacement
 {
+
+
+
+
+
+
     T
     {
         boundaryField
         {
             ".*_to_.*"
             {
-                type            compressible::turbulentTemperatureCoupledBaffleMixed;
+                type            coupledTemperature;
                 Tnbr            T;
                 kappaMethod     solidThermo;
                 value           uniform 300;
             }
         }
     }
+
+
+
 }
 // ************************************************************************* //

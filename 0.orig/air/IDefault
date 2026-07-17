@@ -11,33 +11,47 @@ FoamFile
     format      ascii;
     class       volScalarField;
     location    "0/air";
-    object      epsilon;
+    object      IDefault;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 2 -3 0 0 0 0];
-internalField   uniform 0.01;
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
 
 boundaryField
 {
-
     inlet
     {
-        type            fixedValue;
-        value           uniform 0.01;
+        type            greyDiffusiveRadiation;
+        value           uniform 0;
+        emissivityMode  lookup;
+        emissivity      1;
     }
     outlet
     {
-        type            zeroGradient;
+        type            greyDiffusiveRadiation;
+        value           uniform 0;
+        emissivityMode  lookup;
+        emissivity      1;
     }
     topAndBottom
     {
-        type            slip;
+        type            greyDiffusiveRadiation;
+        value           uniform 0;
+        emissivityMode  lookup;
+        emissivity      1;
     }
     frontAndBack
     {
-        type            slip;
+        type            greyDiffusiveRadiation;
+        value           uniform 0;
+        emissivityMode  lookup;
+        emissivity      1;
     }
-
+    ".*"
+    {
+        type            greyDiffusiveRadiation;
+        value           uniform 0;
+        emissivityMode  solidRadiation;
+    }
 }
-// ************************************************************************* //
