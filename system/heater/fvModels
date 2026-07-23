@@ -23,6 +23,6 @@ heaterSource
     volumeMode      absolute;
     sources
     {
-        h           (225 0);
+        e           (225 0);
     }
 }

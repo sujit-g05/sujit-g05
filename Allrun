@@ -39,7 +39,16 @@ for region in air cylinder heater glass; do
     changeDictionary -region $region
 done
 
-echo "Case setup complete. You can now run foamMultiRun."
+echo "Decomposing mesh for parallel execution..."
+runApplication decomposePar -allRegions
+
+echo "Running foamMultiRun in parallel..."
+runParallel foamMultiRun
+
+echo "Reconstructing mesh and fields..."
+runApplication reconstructPar -allRegions
+
+echo "Case simulation complete."
 
 echo "Setting up post-processing..."
 # Create dummy files for ParaView to easily open the regions

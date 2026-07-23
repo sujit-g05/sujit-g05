@@ -20,10 +20,10 @@ thermoType
     type            heRhoThermo;
     mixture         pureMixture;
     transport       const;
-    thermo          hConst;
+    thermo          eConst;
     equationOfState perfectGas;
     specie          specie;
-    energy          sensibleEnthalpy;
+    energy          sensibleInternalEnergy;
 }
 
 mixture
@@ -35,7 +35,7 @@ mixture
     }
     equationOfState
     {
-        Cp              1005;
+        Cv              1005;
         Hf              0;
     }
     transport

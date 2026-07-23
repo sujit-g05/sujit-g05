@@ -20,25 +20,10 @@ internalField   uniform 100000;
 
 boundaryField
 {
-
-    inlet
+    ".*"
     {
-        type            fixedFluxPressure;
+        type            calculated;
         value           uniform 100000;
     }
-    outlet
-    {
-        type            fixedValue;
-        value           uniform 100000;
-    }
-    topAndBottom
-    {
-        type            zeroGradient;
-    }
-    frontAndBack
-    {
-        type            zeroGradient;
-    }
-
 }
 // ************************************************************************* //

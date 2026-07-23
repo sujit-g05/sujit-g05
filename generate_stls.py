@@ -38,12 +38,14 @@ cylinder.export('constant/triSurface/cylinder.stl', file_type='stl_ascii')
 
 # Generate Borosilicate glass disks
 glass_thickness = 2e-3
-glass1 = trimesh.creation.cylinder(radius=cyl_outer_radius, height=glass_thickness, sections=100)
+glass1 = trimesh.creation.annulus(r_min=heater_radius, r_max=cyl_outer_radius, height=glass_thickness)
+glass1.apply_translation([0, 0, -glass_thickness/2])
 # Move glass1 to one end of the cylinder (along Z before rotation, so translate along Z then rotate)
 glass1.apply_translation([0, 0, cyl_length/2 + glass_thickness/2])
 glass1.apply_transform(rot_matrix)
 
-glass2 = trimesh.creation.cylinder(radius=cyl_outer_radius, height=glass_thickness, sections=100)
+glass2 = trimesh.creation.annulus(r_min=heater_radius, r_max=cyl_outer_radius, height=glass_thickness)
+glass2.apply_translation([0, 0, -glass_thickness/2])
 # Move glass2 to the other end
 glass2.apply_translation([0, 0, -(cyl_length/2 + glass_thickness/2)])
 glass2.apply_transform(rot_matrix)

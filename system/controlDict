@@ -20,7 +20,10 @@ startFrom       startTime;
 startTime       0;
 stopAt          endTime;
 endTime         10;
-deltaT          0.01;
+deltaT          0.0001;
+adjustTimeStep  yes;
+maxCo           1.0;
+maxDi           1.0;
 writeControl    timeStep;
 writeInterval   10;
 purgeWrite      0;
@@ -61,6 +64,31 @@ functions
 
 
     // Add residual plotting data (so the user can plot graphs using foamMonitor)
+
+    // Extract the cylinder surface temperature for detailed analysis
+    cylinderSurface
+    {
+        type            surfaces;
+        libs            ("libsampling.so");
+        writeControl    timeStep;
+        writeInterval   10;
+        region          air;
+
+        surfaceFormat   vtk;
+
+        fields          (T);
+
+        surfaces
+        {
+            cylinder_surface
+            {
+                type        patch;
+                patches     (".*_to_cylinder");
+                interpolate true;
+            }
+        }
+    }
+
     residuals
     {
         type            residuals;

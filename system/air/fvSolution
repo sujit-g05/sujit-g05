@@ -33,7 +33,7 @@ solvers
         relTol          0.01;
     }
 
-    "(U|h|k|epsilon)"
+    "(U|e|k|epsilon)"
     {
         solver          PBiCGStab;
         preconditioner  DILU;
@@ -54,7 +54,7 @@ relaxationFactors
     equations
     {
         U               0.9;
-        h               0.9;
+        e               0.9;
         k               0.9;
         epsilon         0.9;
     }
