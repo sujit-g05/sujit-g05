@@ -9,13 +9,13 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: transparent !important;
+      background: #222222 !important;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-end;
       height: 100vh;
-      -webkit-app-region: drag; /* Allow dragging the window */
+      /* -webkit-app-region: drag; */
     }
 
     #canvas-container {
@@ -83,14 +83,13 @@
 
   <div class="ui-container">
     <div id="controls">
-      <input type="password" id="api-key" placeholder="Gemini API Key" />
       <button id="listen-btn">Listen</button>
     </div>
     <div id="controls" style="margin-top: 5px;">
       <input type="text" id="text-input" placeholder="Type a message..." style="flex-grow: 1; padding: 5px; border-radius: 5px; border: 1px solid #ccc;"/>
       <button id="send-btn">Send</button>
     </div>
-    <div id="status">Waiting for API key...</div>
+    <div id="status">Ready.</div>
   </div>
 
   <!-- Import maps polyfill -->

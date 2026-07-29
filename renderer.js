@@ -7,7 +7,6 @@ import * as THREE from 'three';
 // script or dynamically. We'll use the REST API directly to avoid complex bundling issues in
 // vanilla JS renderer without a bundler like Webpack/Vite.
 
-const apiKeyInput = document.getElementById('api-key');
 const listenBtn = document.getElementById('listen-btn');
 const textInput = document.getElementById('text-input');
 const sendBtn = document.getElementById('send-btn');
@@ -21,9 +20,9 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 5;
 
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+const renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x000000, 0); // Transparent background
+renderer.setClearColor(0x222222, 1); // Solid background matching body
 container.appendChild(renderer.domElement);
 
 // Add lighting
@@ -120,7 +119,7 @@ if (SpeechRecognition) {
   recognition.onresult = async (event) => {
     const transcript = event.results[0][0].transcript;
     statusDiv.textContent = `You said: "${transcript}"`;
-    await processWithGemini(transcript);
+    await processInput(transcript);
   };
 
   recognition.onerror = (event) => {
@@ -143,11 +142,6 @@ function resetListenState() {
 }
 
 listenBtn.addEventListener('click', () => {
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    statusDiv.textContent = 'Please enter a Gemini API Key first.';
-    return;
-  }
   if (recognition) {
     try {
       recognition.start();
@@ -160,16 +154,11 @@ listenBtn.addEventListener('click', () => {
 });
 
 sendBtn.addEventListener('click', async () => {
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) {
-    statusDiv.textContent = 'Please enter a Gemini API Key first.';
-    return;
-  }
   const text = textInput.value.trim();
   if (text) {
     textInput.value = '';
     statusDiv.textContent = `You typed: "${text}"`;
-    await processWithGemini(text);
+    await processInput(text);
   }
 });
 
@@ -221,72 +210,36 @@ function speak(text) {
 }
 
 
-// --- Gemini API & Action Parsing ---
+// --- Basic Rule-Based Action Parsing ---
 
-// System prompt to instruct Gemini how to respond with actions
-const systemInstruction = `
-You are a helpful desktop assistant.
-You can help the user by chatting with them, or by executing commands on their PC.
-If the user asks you to open a website, reply with a JSON object in this format:
-{"action": "open-url", "value": "https://www.example.com", "message": "Opening website."}
+async function processInput(prompt) {
+  const text = prompt.toLowerCase();
 
-If the user asks you to open an application (e.g. calculator, notepad), reply with a JSON object to run the command:
-{"action": "execute-command", "value": "calc", "message": "Opening calculator."}
-(For notepad: {"action": "execute-command", "value": "notepad", "message": "Opening notepad."})
-(For linux/mac, adapt commands appropriately, but assume linux for now: e.g. "gnome-calculator" or "gedit")
-
-If it's just a normal conversation, reply with plain text.
-ONLY reply with JSON if you are executing an action. Do not wrap JSON in markdown blocks like \`\`\`json.
-`;
-
-async function processWithGemini(prompt) {
-  const apiKey = apiKeyInput.value.trim();
-  if (!apiKey) return;
-
-  statusDiv.textContent = 'Thinking...';
-
-  try {
-    if (!window.electronAPI || !window.electronAPI.generateContent) {
-        throw new Error("Electron API is not available");
-    }
-
-    const response = await window.electronAPI.generateContent(apiKey, prompt, systemInstruction);
-
-    if (!response.success) {
-        throw new Error(response.message);
-    }
-
-    const replyText = response.data.candidates[0].content.parts[0].text.trim();
-
-    await handleResponse(replyText);
-
-  } catch (error) {
-    statusDiv.textContent = `Gemini Error: ${error.message}`;
-  }
-}
-
-async function handleResponse(text) {
-  try {
-    // Check if the response is JSON (an action)
-    const actionData = JSON.parse(text);
-
-    if (actionData.action === 'open-url') {
-        statusDiv.textContent = actionData.message;
-        await speak(actionData.message);
-        if (window.electronAPI) {
-            await window.electronAPI.openUrl(actionData.value);
-        }
-    } else if (actionData.action === 'execute-command') {
-        statusDiv.textContent = actionData.message;
-        await speak(actionData.message);
-        if (window.electronAPI) {
-            await window.electronAPI.executeCommand(actionData.value);
-        }
-    }
-  } catch (e) {
-    // Not JSON, just normal text
-    statusDiv.textContent = text;
-    await speak(text);
+  if (text.includes("open google")) {
+      const msg = "Opening Google.";
+      statusDiv.textContent = msg;
+      await speak(msg);
+      if (window.electronAPI) {
+          await window.electronAPI.openUrl("https://www.google.com");
+      }
+  } else if (text.includes("open calculator") || text.includes("open calc")) {
+      const msg = "Opening calculator.";
+      statusDiv.textContent = msg;
+      await speak(msg);
+      if (window.electronAPI) {
+          await window.electronAPI.executeCommand("calc");
+      }
+  } else if (text.includes("open notepad")) {
+      const msg = "Opening notepad.";
+      statusDiv.textContent = msg;
+      await speak(msg);
+      if (window.electronAPI) {
+          await window.electronAPI.executeCommand("notepad");
+      }
+  } else {
+      const defaultResponse = "I'm just a simple voice assistant without AI now. I can only open Google, Calculator, or Notepad.";
+      statusDiv.textContent = defaultResponse;
+      await speak(defaultResponse);
   }
 }
 
