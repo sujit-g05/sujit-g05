@@ -246,28 +246,17 @@ async function processWithGemini(prompt) {
   statusDiv.textContent = 'Thinking...';
 
   try {
-    // We use standard fetch to the Gemini REST API to avoid bundling the SDK
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        system_instruction: {
-            parts: [{ text: systemInstruction }]
-        },
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      })
-    });
-
-    if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+    if (!window.electronAPI || !window.electronAPI.generateContent) {
+        throw new Error("Electron API is not available");
     }
 
-    const data = await response.json();
-    const replyText = data.candidates[0].content.parts[0].text.trim();
+    const response = await window.electronAPI.generateContent(apiKey, prompt, systemInstruction);
+
+    if (!response.success) {
+        throw new Error(response.message);
+    }
+
+    const replyText = response.data.candidates[0].content.parts[0].text.trim();
 
     await handleResponse(replyText);
 

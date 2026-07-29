@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const { exec } = require('child_process');
 
@@ -47,7 +47,33 @@ ipcMain.handle('open-url', async (event, url) => {
   }
 });
 
-const { dialog } = require('electron');
+ipcMain.handle('generate-content', async (event, apiKey, prompt, systemInstruction) => {
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        system_instruction: {
+            parts: [{ text: systemInstruction }]
+        },
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+        return { success: false, message: `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data: data };
+  } catch (error) {
+    return { success: false, message: `Network error: ${error.message}` };
+  }
+});
 
 ipcMain.handle('execute-command', async (event, command) => {
   return new Promise(async (resolve) => {
