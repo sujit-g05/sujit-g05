@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desktop Mate</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #222222 !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100vh;
+      /* -webkit-app-region: drag; */
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      pointer-events: none; /* Let clicks pass through to drag or elements behind if possible */
+    }
+
+    .ui-container {
+      position: absolute;
+      bottom: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      -webkit-app-region: no-drag; /* Prevent dragging from UI elements */
+      font-family: sans-serif;
+      color: white;
+    }
+
+    #controls {
+      display: flex;
+      gap: 5px;
+    }
+
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+
+    input[type="password"] {
+      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #status {
+      font-size: 12px;
+      text-align: center;
+      max-width: 300px;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div class="ui-container">
+    <div id="controls">
+      <button id="listen-btn">Listen</button>
+    </div>
+    <div id="controls" style="margin-top: 5px;">
+      <input type="text" id="text-input" placeholder="Type a message..." style="flex-grow: 1; padding: 5px; border-radius: 5px; border: 1px solid #ccc;"/>
+      <button id="send-btn">Send</button>
+    </div>
+    <div id="status">Ready.</div>
+  </div>
+
+  <!-- Import maps polyfill -->
+  <!-- Remove this if you don't need it -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js"
+      }
+    }
+  </script>
+
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>

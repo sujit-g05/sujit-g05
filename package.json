@@ -1,0 +1,26 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "Desktop Mate 3D Character",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sujit-g05/sujit-g05.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sujit-g05/sujit-g05/issues"
+  },
+  "homepage": "https://github.com/sujit-g05/sujit-g05#readme",
+  "dependencies": {
+    "electron": "^43.2.0",
+    "three": "^0.185.1"
+  }
+}
