@@ -47,32 +47,57 @@ ipcMain.handle('open-url', async (event, url) => {
   }
 });
 
+const https = require('https');
+
 ipcMain.handle('generate-content', async (event, apiKey, prompt, systemInstruction) => {
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
+  return new Promise((resolve) => {
+    const postData = JSON.stringify({
+      system_instruction: {
+          parts: [{ text: systemInstruction }]
       },
-      body: JSON.stringify({
-        system_instruction: {
-            parts: [{ text: systemInstruction }]
-        },
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      })
+      contents: [{
+        parts: [{ text: prompt }]
+      }]
     });
 
-    if (!response.ok) {
-        return { success: false, message: `API error: ${response.status}` };
-    }
+    const options = {
+      hostname: 'generativelanguage.googleapis.com',
+      port: 443,
+      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
 
-    const data = await response.json();
-    return { success: true, data: data };
-  } catch (error) {
-    return { success: false, message: `Network error: ${error.message}` };
-  }
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try {
+             resolve({ success: true, data: JSON.parse(data) });
+          } catch (e) {
+             resolve({ success: false, message: `Failed to parse response: ${e.message}` });
+          }
+        } else {
+           resolve({ success: false, message: `API error: ${res.statusCode} ${data}` });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      resolve({ success: false, message: `Network error: ${error.message}` });
+    });
+
+    req.write(postData);
+    req.end();
+  });
 });
 
 ipcMain.handle('execute-command', async (event, command) => {
