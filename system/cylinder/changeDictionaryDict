@@ -29,10 +29,10 @@ dictionaryReplacement
         {
             ".*_to_.*"
             {
-                type            coupledTemperature;
+                type            compressible::turbulentTemperatureCoupledBaffleMixed;
+                value           $internalField;
                 Tnbr            T;
                 kappaMethod     solidThermo;
-                value           uniform 300;
             }
         }
     }
