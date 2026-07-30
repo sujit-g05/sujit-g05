@@ -1,0 +1,108 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \    /   O peration     | Version:  13                                    |
+|   \  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      changeDictionaryDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+U
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedValue;
+            value           uniform (1 0 0);
+        }
+        outlet
+        {
+            type            inletOutlet;
+            inletValue      uniform (0 0 0);
+            value           uniform (0 0 0);
+        }
+        sides
+        {
+            type            slip;
+        }
+        ".*_to_.*"
+        {
+            type            fixedValue;
+            value           uniform (0 0 0);
+        }
+    }
+}
+T
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedValue;
+            value           uniform 293.15;
+        }
+        outlet
+        {
+            type            inletOutlet;
+            inletValue      uniform 293.15;
+            value           uniform 293.15;
+        }
+        sides
+        {
+            type            zeroGradient;
+        }
+        ".*_to_.*"
+        {
+            type            compressible::turbulentTemperatureCoupledBaffleMixed;
+            Tnbr            T;
+            kappaMethod     fluidThermo;
+            value           uniform 293.15;
+        }
+    }
+}
+p_rgh
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedFluxPressure;
+            value           uniform 101325;
+        }
+        outlet
+        {
+            type            fixedValue;
+            value           uniform 101325;
+        }
+        sides
+        {
+            type            zeroGradient;
+        }
+        ".*_to_.*"
+        {
+            type            fixedFluxPressure;
+            value           uniform 101325;
+        }
+    }
+}
+qr
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            greyDiffusiveRadiation;
+            emissivityMode  lookup;
+            emissivity      uniform 1.0; // Air boundary
+            value           uniform (0 0 0);
+        }
+    }
+}
