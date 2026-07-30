@@ -4,43 +4,25 @@ import trimesh.creation
 import numpy as np
 
 def create_geometry():
-    # Create directories
     os.makedirs('constant/triSurface', exist_ok=True)
     os.makedirs('system', exist_ok=True)
 
-    # 1. Heater (FeCrAl alloy)
-    # mass = 191g = 0.191 kg, density = 7.25 g/cm^3 = 7250 kg/m^3
-    # volume = mass / density = 0.191 / 7250 = 2.63448e-5 m^3
-    # V = pi * r^2 * h => r = sqrt(V / (pi * h))
-    # h = 600 mm = 0.6 m
-    # r = sqrt(2.63448e-5 / (pi * 0.6)) = 0.0037388 m = 3.7388 mm
     heater = trimesh.creation.cylinder(radius=0.0037388, height=0.6)
     heater.export('constant/triSurface/heater.stl')
     print("Created heater.stl")
 
-    # 2. Hollow cylinder (borosilicate glass disk later)
-    # length = 560 mm = 0.56 m, D = 150 mm => R = 75 mm = 0.075 m, thickness = 0.9 mm = 0.0009 m
-    # Inner radius = 0.075 - 0.0009 = 0.0741 m
     cylinder = trimesh.creation.annulus(r_min=0.0741, r_max=0.075, height=0.56)
     cylinder.export('constant/triSurface/cylinder.stl')
     print("Created cylinder.stl")
 
-    # 3. Glass Top
-    # Caps the cylinder. R_max = 0.075 m, R_min = 0.0037388 m (hole for heater)
-    # Assuming standard thickness for glass, let's use 0.9 mm as well for the caps for simplicity, or 2mm?
-    # No thickness specified for caps, let's assume 2mm
     thickness_cap = 0.002
     glass_top = trimesh.creation.annulus(r_min=0.0037388, r_max=0.075, height=thickness_cap)
-    # Translate to top of cylinder
-    # Cylinder is centered at z=0, height 0.56 => top is at z=0.28
-    # Glass top is centered at z=0, so move it to z=0.28 + thickness_cap/2
     matrix_top = np.eye(4)
     matrix_top[2, 3] = 0.28 + thickness_cap/2
     glass_top.apply_transform(matrix_top)
     glass_top.export('constant/triSurface/glass_top.stl')
     print("Created glass_top.stl")
 
-    # 4. Glass Bottom
     glass_bottom = trimesh.creation.annulus(r_min=0.0037388, r_max=0.075, height=thickness_cap)
     matrix_bottom = np.eye(4)
     matrix_bottom[2, 3] = -0.28 - thickness_cap/2
@@ -48,9 +30,7 @@ def create_geometry():
     glass_bottom.export('constant/triSurface/glass_bottom.stl')
     print("Created glass_bottom.stl")
 
-
 def write_meshing_dicts():
-    # blockMeshDict
     block_mesh = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -130,7 +110,6 @@ mergePatchPairs
     with open('system/blockMeshDict', 'w') as f:
         f.write(block_mesh)
 
-    # surfaceFeaturesDict
     surface_features = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -192,7 +171,6 @@ glass_bottom.stl
     with open('system/surfaceFeaturesDict', 'w') as f:
         f.write(surface_features)
 
-    # snappyHexMeshDict
     snappy_hex_mesh = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -319,7 +297,11 @@ castellatedMeshControls
     {
     }
 
-    insidePoint (-10.0 0.0 0.0);
+    locationsInMesh
+    (
+        ((-10.0 0.0 0.0) air_outer)
+        ((0.035 0.0 0.0) air_inner)
+    );
 
     allowFreeStandingZoneFaces true;
 }
@@ -381,7 +363,6 @@ mergeTolerance 1e-6;
     with open('system/snappyHexMeshDict', 'w') as f:
         f.write(snappy_hex_mesh)
 
-    # meshQualityDict
     mesh_quality = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -419,9 +400,7 @@ errorReduction 0.75;
         f.write(mesh_quality)
 
 
-
 def write_solver_dicts():
-    # controlDict
     control_dict = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -442,7 +421,7 @@ application     chtMultiRegionFoam;
 startFrom       startTime;
 startTime       0;
 stopAt          endTime;
-endTime         10;
+endTime         100;
 deltaT          0.001;
 writeControl    timeStep;
 writeInterval   10;
@@ -454,12 +433,21 @@ timeFormat      general;
 timePrecision   6;
 runTimeModifiable true;
 
+modules
+{
+    air_outer       fluid;
+    air_inner       fluid;
+    heater          solid;
+    cylinder        solid;
+    glass_top       solid;
+    glass_bottom    solid;
+}
+
 // ************************************************************************* //
 """
     with open('system/controlDict', 'w') as f:
         f.write(control_dict)
 
-    # fvSchemes
     fv_schemes = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -492,6 +480,7 @@ divSchemes
     div(phi,U)      Gauss linearUpwind grad(U);
     div(phi,h)      Gauss linearUpwind grad(h);
     div(phi,k)      Gauss upwind;
+    div(phi,K)      Gauss linearUpwind grad(U);
     div(phi,epsilon) Gauss upwind;
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 }
@@ -516,7 +505,6 @@ snGradSchemes
     with open('system/fvSchemes', 'w') as f:
         f.write(fv_schemes)
 
-    # fvSolution
     fv_solution = """/*--------------------------------*- C++ -*----------------------------------*\\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -589,7 +577,489 @@ PIMPLE
         f.write(fv_solution)
 
 
+def write_0_orig_dicts():
+    os.makedirs('0.orig', exist_ok=True)
+
+    header = """/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      <OBJECT>;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+"""
+    header_vec = header.replace("volScalarField", "volVectorField")
+
+    t_content = header.replace("<OBJECT>", "T") + """
+dimensions      [0 0 0 1 0 0 0];
+internalField   uniform 293.15;
+boundaryField
+{
+    ".*"
+    {
+        type            zeroGradient;
+    }
+}
+"""
+    with open('0.orig/T', 'w') as f: f.write(t_content)
+
+    u_content = header_vec.replace("<OBJECT>", "U") + """
+dimensions      [0 1 -1 0 0 0 0];
+internalField   uniform (0 0 0);
+boundaryField
+{
+    ".*"
+    {
+        type            uniformFixedValue;
+        uniformValue    constant (0 0 0);
+    }
+}
+"""
+    with open('0.orig/U', 'w') as f: f.write(u_content)
+
+    prgh_content = header.replace("<OBJECT>", "p_rgh") + """
+dimensions      [1 -1 -2 0 0 0 0];
+internalField   uniform 101325;
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+}
+"""
+    with open('0.orig/p_rgh', 'w') as f: f.write(prgh_content)
+
+    p_content = header.replace("<OBJECT>", "p") + """
+dimensions      [1 -1 -2 0 0 0 0];
+internalField   uniform 101325;
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform 101325;
+    }
+}
+"""
+    with open('0.orig/p', 'w') as f: f.write(p_content)
+
+    k_content = header.replace("<OBJECT>", "k") + """
+dimensions      [0 2 -2 0 0 0 0];
+internalField   uniform 0.1;
+boundaryField
+{
+    ".*"
+    {
+        type            zeroGradient;
+    }
+}
+"""
+    with open('0.orig/k', 'w') as f: f.write(k_content)
+
+    eps_content = header.replace("<OBJECT>", "epsilon") + """
+dimensions      [0 2 -3 0 0 0 0];
+internalField   uniform 0.1;
+boundaryField
+{
+    ".*"
+    {
+        type            zeroGradient;
+    }
+}
+"""
+    with open('0.orig/epsilon', 'w') as f: f.write(eps_content)
+
+    nut_content = header.replace("<OBJECT>", "nut") + """
+dimensions      [0 2 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+}
+"""
+    with open('0.orig/nut', 'w') as f: f.write(nut_content)
+
+    alphat_content = header.replace("<OBJECT>", "alphat") + """
+dimensions      [1 -1 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+}
+"""
+    with open('0.orig/alphat', 'w') as f: f.write(alphat_content)
+
+
+def write_constant_dicts():
+    os.makedirs('constant/air_outer', exist_ok=True)
+    os.makedirs('constant/air_inner', exist_ok=True)
+    os.makedirs('constant/heater', exist_ok=True)
+    os.makedirs('constant/cylinder', exist_ok=True)
+    os.makedirs('constant/glass_top', exist_ok=True)
+    os.makedirs('constant/glass_bottom', exist_ok=True)
+
+    header = """/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      <OBJECT>;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+"""
+
+    g = header.replace("<OBJECT>", "g") + """
+dimensions      [0 1 -2 0 0 0 0];
+value           (0 0 -9.81);
+"""
+    with open('constant/g', 'w') as f: f.write(g)
+
+    air_thermo = header.replace("<OBJECT>", "thermophysicalProperties") + """
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+mixture
+{
+    specie
+    {
+        nMoles      1;
+        molWeight   28.96;
+    }
+    thermodynamics
+    {
+        Cp          1004.4;
+        Hf          0;
+    }
+    transport
+    {
+        mu          1.831e-05;
+        Pr          0.705;
+    }
+}
+"""
+    air_turb = header.replace("<OBJECT>", "turbulenceProperties") + """
+simulationType  RAS;
+
+RAS
+{
+    RASModel        kEpsilon;
+    turbulence      on;
+    printCoeffs     on;
+}
+"""
+    air_rad = header.replace("<OBJECT>", "radiationProperties") + """
+radiation       on;
+radiationModel  fvDOM;
+
+fvDOMCoeffs
+{
+    nPhi        2;
+    nTheta      2;
+    tolerance   1e-3;
+    maxIter     10;
+}
+
+absorptionEmissionModel constantAbsorptionEmission;
+
+constantAbsorptionEmissionCoeffs
+{
+    a           ( 0 );
+    e           ( 0 );
+    E           ( 0 );
+}
+
+scatterModel    none;
+sootModel       none;
+"""
+
+    for region in ['air_outer', 'air_inner']:
+        with open(f'constant/{region}/thermophysicalProperties', 'w') as f: f.write(air_thermo)
+        with open(f'constant/{region}/turbulenceProperties', 'w') as f: f.write(air_turb)
+        with open(f'constant/{region}/radiationProperties', 'w') as f: f.write(air_rad)
+
+
+    solid_thermo_template = header.replace("<OBJECT>", "thermophysicalProperties") + """
+thermoType
+{
+    type            heSolidThermo;
+    mixture         pureMixture;
+    transport       constIso;
+    thermo          hConst;
+    equationOfState rhoConst;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+mixture
+{
+    specie
+    {
+        nMoles      1;
+        molWeight   1;
+    }
+    transport
+    {
+        kappa       <KAPPA>;
+    }
+    thermodynamics
+    {
+        Hf          0;
+        Cp          <CP>;
+    }
+    equationOfState
+    {
+        rho         <RHO>;
+    }
+}
+"""
+    solid_rad = header.replace("<OBJECT>", "radiationProperties") + """
+radiation off;
+"""
+    for region in ['heater', 'cylinder', 'glass_top', 'glass_bottom']:
+        with open(f'constant/{region}/radiationProperties', 'w') as f: f.write(solid_rad)
+
+    heater_thermo = solid_thermo_template.replace("<KAPPA>", "11").replace("<CP>", "460").replace("<RHO>", "7250")
+    with open('constant/heater/thermophysicalProperties', 'w') as f: f.write(heater_thermo)
+
+    cyl_thermo = solid_thermo_template.replace("<KAPPA>", "0.84126").replace("<CP>", "857.41").replace("<RHO>", "1570")
+    with open('constant/cylinder/thermophysicalProperties', 'w') as f: f.write(cyl_thermo)
+
+    glass_thermo = solid_thermo_template.replace("<KAPPA>", "1.2").replace("<CP>", "750").replace("<RHO>", "2230")
+    with open('constant/glass_top/thermophysicalProperties', 'w') as f: f.write(glass_thermo)
+    with open('constant/glass_bottom/thermophysicalProperties', 'w') as f: f.write(glass_thermo)
+
+
+def write_system_dicts():
+    os.makedirs('system/air_outer', exist_ok=True)
+    os.makedirs('system/air_inner', exist_ok=True)
+    os.makedirs('system/heater', exist_ok=True)
+    os.makedirs('system/cylinder', exist_ok=True)
+    os.makedirs('system/glass_top', exist_ok=True)
+    os.makedirs('system/glass_bottom', exist_ok=True)
+
+    header = """/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      <OBJECT>;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+"""
+
+    cd_fluid = header.replace("<OBJECT>", "changeDictionaryDict") + """
+U
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedValue;
+            value           uniform (1 0 0);
+        }
+        outlet
+        {
+            type            inletOutlet;
+            inletValue      uniform (0 0 0);
+            value           uniform (0 0 0);
+        }
+        sides
+        {
+            type            slip;
+        }
+        ".*_to_.*"
+        {
+            type            fixedValue;
+            value           uniform (0 0 0);
+        }
+    }
+}
+T
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedValue;
+            value           uniform 293.15;
+        }
+        outlet
+        {
+            type            inletOutlet;
+            inletValue      uniform 293.15;
+            value           uniform 293.15;
+        }
+        sides
+        {
+            type            zeroGradient;
+        }
+        ".*_to_.*"
+        {
+            type            compressible::turbulentTemperatureCoupledBaffleMixed;
+            Tnbr            T;
+            kappaMethod     fluidThermo;
+            value           uniform 293.15;
+        }
+    }
+}
+p_rgh
+{
+    boundaryField
+    {
+        inlet
+        {
+            type            fixedFluxPressure;
+            value           uniform 101325;
+        }
+        outlet
+        {
+            type            fixedValue;
+            value           uniform 101325;
+        }
+        sides
+        {
+            type            zeroGradient;
+        }
+        ".*_to_.*"
+        {
+            type            fixedFluxPressure;
+            value           uniform 101325;
+        }
+    }
+}
+"""
+    with open('system/air_outer/changeDictionaryDict', 'w') as f: f.write(cd_fluid)
+
+    cd_inner = header.replace("<OBJECT>", "changeDictionaryDict") + """
+U
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            fixedValue;
+            value           uniform (0 0 0);
+        }
+    }
+}
+T
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            compressible::turbulentTemperatureCoupledBaffleMixed;
+            Tnbr            T;
+            kappaMethod     fluidThermo;
+            value           uniform 293.15;
+        }
+    }
+}
+p_rgh
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            fixedFluxPressure;
+            value           uniform 101325;
+        }
+    }
+}
+"""
+    with open('system/air_inner/changeDictionaryDict', 'w') as f: f.write(cd_inner)
+
+    cd_solid = header.replace("<OBJECT>", "changeDictionaryDict") + """
+T
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            compressible::turbulentTemperatureCoupledBaffleMixed;
+            Tnbr            T;
+            kappaMethod     solidThermo;
+            value           uniform 293.15;
+        }
+    }
+}
+"""
+    for region in ['heater', 'cylinder', 'glass_top', 'glass_bottom']:
+        with open(f'system/{region}/changeDictionaryDict', 'w') as f: f.write(cd_solid)
+
+    fv_models = header.replace("<OBJECT>", "fvModels") + """
+heatSource
+{
+    type            scalarSemiImplicitSource;
+    volumeMode      absolute;
+    selectionMode   all;
+
+    sources
+    {
+        h           (225 0); // Absolute power in W
+    }
+}
+"""
+    with open('system/heater/fvModels', 'w') as f: f.write(fv_models)
+
+    with open('system/fvSchemes', 'r') as f: fv_schemes = f.read()
+    with open('system/fvSolution', 'r') as f: fv_solution = f.read()
+
+    for region in ['air_outer', 'air_inner', 'heater', 'cylinder', 'glass_top', 'glass_bottom']:
+        with open(f'system/{region}/fvSchemes', 'w') as f: f.write(fv_schemes)
+        with open(f'system/{region}/fvSolution', 'w') as f: f.write(fv_solution)
+
+    with open('system/air_inner/fvSolution', 'r') as f:
+        inner_sol = f.read()
+    inner_sol = inner_sol.replace('"p_rgh.*"\n    {', '"p_rgh.*"\n    {\n        pRefCell        0;\n        pRefValue       101325;')
+    with open('system/air_inner/fvSolution', 'w') as f:
+        f.write(inner_sol)
+
+
 if __name__ == '__main__':
     create_geometry()
     write_meshing_dicts()
     write_solver_dicts()
+    write_0_orig_dicts()
+    write_constant_dicts()
+    write_system_dicts()
