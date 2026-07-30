@@ -23,8 +23,14 @@ else
         changeDictionary -region $region
     done
 
-    echo "Running chtMultiRegionFoam..."
-    chtMultiRegionFoam
+    echo "Decomposing mesh for parallel execution..."
+    decomposePar -allRegions -force
+
+    echo "Running chtMultiRegionFoam in parallel on 8 processors..."
+    mpirun -np 8 chtMultiRegionFoam -parallel
+
+    echo "Reconstructing mesh and fields..."
+    reconstructPar -allRegions
 
     echo "Simulation setup completed successfully!"
 fi

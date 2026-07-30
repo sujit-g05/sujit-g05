@@ -18,14 +18,14 @@ def create_geometry():
     thickness_cap = 0.002
     glass_top = trimesh.creation.annulus(r_min=0.0037388, r_max=0.075, height=thickness_cap)
     matrix_top = np.eye(4)
-    matrix_top[2, 3] = 0.28 + thickness_cap/2
+    matrix_top[2, 3] = 0.28 + thickness_cap/2 - 0.0001
     glass_top.apply_transform(matrix_top)
     glass_top.export('constant/triSurface/glass_top.stl')
     print("Created glass_top.stl")
 
     glass_bottom = trimesh.creation.annulus(r_min=0.0037388, r_max=0.075, height=thickness_cap)
     matrix_bottom = np.eye(4)
-    matrix_bottom[2, 3] = -0.28 - thickness_cap/2
+    matrix_bottom[2, 3] = -0.28 - thickness_cap/2 + 0.0001
     glass_bottom.apply_transform(matrix_bottom)
     glass_bottom.export('constant/triSurface/glass_bottom.stl')
     print("Created glass_bottom.stl")
@@ -243,19 +243,19 @@ castellatedMeshControls
     (
         {
             file "heater.eMesh";
-            level 2;
+            level 6;
         }
         {
             file "cylinder.eMesh";
-            level 2;
+            level 6;
         }
         {
             file "glass_top.eMesh";
-            level 2;
+            level 6;
         }
         {
             file "glass_bottom.eMesh";
-            level 2;
+            level 6;
         }
     );
 
@@ -263,28 +263,28 @@ castellatedMeshControls
     {
         heater
         {
-            level (2 2);
+            level (5 6);
             faceZone heater;
             cellZone heater;
             cellZoneInside inside;
         }
         cylinder
         {
-            level (2 2);
+            level (5 6);
             faceZone cylinder;
             cellZone cylinder;
             cellZoneInside inside;
         }
         glass_top
         {
-            level (2 2);
+            level (5 6);
             faceZone glass_top;
             cellZone glass_top;
             cellZoneInside inside;
         }
         glass_bottom
         {
-            level (2 2);
+            level (5 6);
             faceZone glass_bottom;
             cellZone glass_bottom;
             cellZoneInside inside;
@@ -706,6 +706,36 @@ boundaryField
 }
 """
     with open('0.orig/alphat', 'w') as f: f.write(alphat_content)
+    # G
+    g_content = header.replace("<OBJECT>", "G") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+}
+"""
+    with open('0.orig/G', 'w') as f: f.write(g_content)
+
+    # qr
+    qr_content = header_vec.replace("<OBJECT>", "qr") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform (0 0 0);
+boundaryField
+{
+    ".*"
+    {
+        type            calculated;
+        value           uniform (0 0 0);
+    }
+}
+"""
+    with open('0.orig/qr', 'w') as f: f.write(qr_content)
+
 
 
 def write_constant_dicts():
@@ -967,6 +997,19 @@ p_rgh
         }
     }
 }
+qr
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            greyDiffusiveRadiation;
+            emissivityMode  lookup;
+            emissivity      uniform 1.0; // Air boundary
+            value           uniform (0 0 0);
+        }
+    }
+}
 """
     with open('system/air_outer/changeDictionaryDict', 'w') as f: f.write(cd_fluid)
 
@@ -1006,6 +1049,19 @@ p_rgh
         }
     }
 }
+qr
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            greyDiffusiveRadiation;
+            emissivityMode  lookup;
+            emissivity      uniform 1.0; // Air boundary
+            value           uniform (0 0 0);
+        }
+    }
+}
 """
     with open('system/air_inner/changeDictionaryDict', 'w') as f: f.write(cd_inner)
 
@@ -1023,9 +1079,29 @@ T
         }
     }
 }
+qr
+{
+    boundaryField
+    {
+        ".*_to_.*"
+        {
+            type            greyDiffusiveRadiation;
+            emissivityMode  lookup;
+            emissivity      uniform 0.7; // Applying user specified emissivity
+            value           uniform (0 0 0);
+        }
+    }
+}
 """
     for region in ['heater', 'cylinder', 'glass_top', 'glass_bottom']:
         with open(f'system/{region}/changeDictionaryDict', 'w') as f: f.write(cd_solid)
+
+    decompose_par = header.replace("<OBJECT>", "decomposeParDict") + """
+numberOfSubdomains 8;
+
+method          scotch;
+"""
+    with open('system/decomposeParDict', 'w') as f: f.write(decompose_par)
 
     fv_models = header.replace("<OBJECT>", "fvModels") + """
 heatSource
