@@ -13,3 +13,36 @@ FoamFile
     object      fvSchemes;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         Euler;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+    div(phi,U)      Gauss linearUpwind grad(U);
+    div(phi,e)      Gauss linearUpwind grad(e);
+    div(phi,K)      Gauss linearUpwind grad(K);
+}
+
+laplacianSchemes
+{
+    default         Gauss linear orthogonal;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         orthogonal;
+}

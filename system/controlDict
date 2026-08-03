@@ -13,7 +13,6 @@ FoamFile
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 application     foamMultiRun;
 startFrom       startTime;
 startTime       0;

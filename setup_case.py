@@ -1,120 +1,134 @@
-import gmsh
 import os
+import stat
 
-def create_mesh():
-    gmsh.initialize()
-    gmsh.model.add("multiregion")
+def create_blockMeshDict():
+    X = [-11.2, -0.282, -0.280, 0.280, 0.282, 11.2]
+    Y = [-3.0, -0.075, -0.0741, -0.0025, 0.0025, 0.0741, 0.075, 3.0]
+    Z = [0.0, 0.1]
 
-    # Dimensions
-    L = 22.4
-    H = 6.0
-    R_out = 150e-3 / 2          # 0.075
-    R_in = R_out - 0.9e-3       # 0.0741
-    R_heater = 5e-3 / 2         # 0.0025
-    dz = 0.1 # Z-thickness for 2D
+    nx = [50, 3, 100, 3, 50]
+    ny = [30, 3, 20, 5, 20, 3, 30]
 
-    # Create 2D geometry
-    box = gmsh.model.occ.addRectangle(-L/2, -H/2, 0, L, H)
+    gx = [0.05, 1, 1, 1, 20]
+    gy = [0.05, 1, 1, 1, 1, 1, 20]
 
-    cyl_outer = gmsh.model.occ.addDisk(0, 0, 0, R_out, R_out)
-    cyl_inner = gmsh.model.occ.addDisk(0, 0, 0, R_in, R_in)
-    heater = gmsh.model.occ.addDisk(0, 0, 0, R_heater, R_heater)
+    def V(i, j, k):
+        return i + j*len(X) + k*len(X)*len(Y)
 
-    # Fragment to get distinct non-overlapping regions
-    gmsh.model.occ.fragment([(2, box)], [(2, cyl_outer), (2, cyl_inner), (2, heater)])
-    gmsh.model.occ.synchronize()
+    def get_zone(i, j):
+        if j == 3 and i in [1, 2, 3]:
+            return "heater"
+        if i in [1, 3] and j in [1, 2, 4, 5]:
+            return "glass"
+        if i == 2 and j in [1, 5]:
+            return "cylinder"
+        if i == 2 and j in [2, 4]:
+            return "innerAir"
+        return "outerAir"
 
-    # Identify the 2D regions by their areas
-    surfaces = gmsh.model.getEntities(2)
-    areas = []
-    for dim, tag in surfaces:
-        mass = gmsh.model.occ.getMass(dim, tag)
-        cm = gmsh.model.occ.getCenterOfMass(dim, tag)
-        areas.append((tag, mass, cm))
+    pts_str = ""
+    for k, z in enumerate(Z):
+        for j, y in enumerate(Y):
+            for i, x in enumerate(X):
+                pts_str += f"    ({x:.6f} {y:.6f} {z:.6f})\n"
 
-    # Sort by area
-    areas.sort(key=lambda x: x[1])
+    blocks_str = ""
+    for i in range(len(X)-1):
+        for j in range(len(Y)-1):
+            zone = get_zone(i, j)
+            v000 = V(i, j, 0)
+            v100 = V(i+1, j, 0)
+            v110 = V(i+1, j+1, 0)
+            v010 = V(i, j+1, 0)
+            v001 = V(i, j, 1)
+            v101 = V(i+1, j, 1)
+            v111 = V(i+1, j+1, 1)
+            v011 = V(i, j+1, 1)
 
-    vols = {}
-    surf_to_name = {
-        areas[0][0]: "heater",
-        areas[1][0]: "cylinder",
-        areas[2][0]: "innerAir",
-        areas[3][0]: "outerAir"
-    }
+            blocks_str += f"    hex ({v000} {v100} {v110} {v010} {v001} {v101} {v111} {v011}) {zone} ({nx[i]} {ny[j]} 1) simpleGrading ({gx[i]} {gy[j]} 1)\n"
 
-    front_back_surfs = []
-    for tag, name in surf_to_name.items():
-        ext = gmsh.model.occ.extrude([(2, tag)], 0, 0, dz, numElements=[1], recombine=True)
-        top_surf = ext[0][1]
-        vol = ext[1][1]
-        vols[name] = vol
-        front_back_surfs.extend([tag, top_surf])
+    inlet_faces = []
+    outlet_faces = []
+    top_bottom_faces = []
 
-    gmsh.model.occ.synchronize()
-    gmsh.model.occ.removeAllDuplicates()
-    gmsh.model.occ.synchronize()
+    for j in range(len(Y)-1):
+        inlet_faces.append(f"({V(0, j, 0)} {V(0, j, 1)} {V(0, j+1, 1)} {V(0, j+1, 0)})")
+        outlet_faces.append(f"({V(5, j, 0)} {V(5, j+1, 0)} {V(5, j+1, 1)} {V(5, j, 1)})")
 
-    inlet_surfs = []
-    outlet_surfs = []
-    top_bottom_surfs = []
+    for i in range(len(X)-1):
+        top_bottom_faces.append(f"({V(i, 0, 0)} {V(i+1, 0, 0)} {V(i+1, 0, 1)} {V(i, 0, 1)})")
+        top_bottom_faces.append(f"({V(i, 7, 0)} {V(i, 7, 1)} {V(i+1, 7, 1)} {V(i+1, 7, 0)})")
 
-    surfaces = gmsh.model.getEntities(2)
-    final_front_back = []
+    os.makedirs("system", exist_ok=True)
+    with open("system/blockMeshDict", "w") as f:
+        f.write(f"""/*--------------------------------*- C++ -*----------------------------------*\\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\\*---------------------------------------------------------------------------*/
+FoamFile
+{{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    for dim, tag in surfaces:
-        bbox = gmsh.model.getBoundingBox(dim, tag)
-        xmin, ymin, zmin, xmax, ymax, zmax = bbox
+scale   1;
 
-        # Front and back
-        if abs(zmax - zmin) < 1e-6:
-            final_front_back.append(tag)
-            continue
+vertices
+(
+{pts_str}
+);
 
-        # Left (inlet)
-        if abs(xmin - (-L/2)) < 1e-6 and abs(xmax - (-L/2)) < 1e-6:
-            inlet_surfs.append(tag)
-            continue
+blocks
+(
+{blocks_str}
+);
 
-        # Right (outlet)
-        if abs(xmin - (L/2)) < 1e-6 and abs(xmax - (L/2)) < 1e-6:
-            outlet_surfs.append(tag)
-            continue
+edges
+(
+);
 
-        # Top and bottom
-        if (abs(ymin - (-H/2)) < 1e-6 and abs(ymax - (-H/2)) < 1e-6) or \
-           (abs(ymin - (H/2)) < 1e-6 and abs(ymax - (H/2)) < 1e-6):
-            top_bottom_surfs.append(tag)
-            continue
+boundary
+(
+    inlet
+    {{
+        type patch;
+        faces
+        (
+            {" ".join(inlet_faces)}
+        );
+    }}
+    outlet
+    {{
+        type patch;
+        faces
+        (
+            {" ".join(outlet_faces)}
+        );
+    }}
+    topAndBottom
+    {{
+        type patch;
+        faces
+        (
+            {" ".join(top_bottom_faces)}
+        );
+    }}
+);
 
-    for name, tag in vols.items():
-        gmsh.model.addPhysicalGroup(3, [tag], name=name)
+defaultPatch
+{{
+    name frontAndBack;
+    type empty;
+}}
 
-    if inlet_surfs: gmsh.model.addPhysicalGroup(2, inlet_surfs, name="inlet")
-    if outlet_surfs: gmsh.model.addPhysicalGroup(2, outlet_surfs, name="outlet")
-    if top_bottom_surfs: gmsh.model.addPhysicalGroup(2, top_bottom_surfs, name="topAndBottom")
-    if final_front_back: gmsh.model.addPhysicalGroup(2, final_front_back, name="frontAndBack")
-
-    # Meshing - MAKE COARSER FOR SPEED
-    gmsh.model.mesh.field.add("Distance", 1)
-    gmsh.model.mesh.field.setNumbers(1, "CurvesList", [c for d, c in gmsh.model.getEntities(1) if d==1])
-    gmsh.model.mesh.field.setNumber(1, "Sampling", 20)
-
-    gmsh.model.mesh.field.add("Threshold", 2)
-    gmsh.model.mesh.field.setNumber(2, "InField", 1)
-    gmsh.model.mesh.field.setNumber(2, "SizeMin", 0.005) # coarser
-    gmsh.model.mesh.field.setNumber(2, "SizeMax", 1.0)   # coarser
-    gmsh.model.mesh.field.setNumber(2, "DistMin", 0.1)
-    gmsh.model.mesh.field.setNumber(2, "DistMax", 2.0)
-
-    gmsh.model.mesh.field.setAsBackgroundMesh(2)
-    gmsh.option.setNumber("Mesh.MeshSizeExtendFromBoundary", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeFromPoints", 0)
-    gmsh.option.setNumber("Mesh.MeshSizeFromCurvature", 0)
-
-    gmsh.model.mesh.generate(3)
-    gmsh.write("mesh.msh")
-    gmsh.finalize()
+// ************************************************************************* //
+""")
 
 def create_openfoam_dicts():
     os.makedirs("system", exist_ok=True)
@@ -136,7 +150,6 @@ FoamFile
     object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
 application     foamMultiRun;
 startFrom       startTime;
 startTime       0;
@@ -170,6 +183,39 @@ FoamFile
     object      fvSchemes;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         Euler;
+}
+
+gradSchemes
+{
+    default         Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+    div(phi,U)      Gauss linearUpwind grad(U);
+    div(phi,e)      Gauss linearUpwind grad(e);
+    div(phi,K)      Gauss linearUpwind grad(K);
+}
+
+laplacianSchemes
+{
+    default         Gauss linear orthogonal;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         orthogonal;
+}
 """)
 
     with open("system/fvSolution", "w") as f:
@@ -188,23 +234,61 @@ FoamFile
     object      fvSolution;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+solvers
+{
+    "rho.*"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-7;
+        relTol          0;
+    }
+
+    "p_rgh.*"
+    {
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-7;
+        relTol          0.01;
+    }
+
+    "U.*"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
+
+    "e.*"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
+}
+
+PIMPLE
+{
+    nOuterCorrectors 1;
+    nCorrectors      2;
+    nNonOrthogonalCorrectors 0;
+}
 """)
 
 def create_run_script():
     with open("run.sh", "w") as f:
         f.write("""#!/bin/bash
 set -e
-gmshToFoam mesh.msh
-
-# Update boundary type for frontAndBack to empty
-sed -i '/frontAndBack/,/}/ s/type.*patch;/type empty;/' constant/polyMesh/boundary
-sed -i '/frontAndBack/,/}/ s/type.*wall;/type empty;/' constant/polyMesh/boundary
-
+rm -rf constant/polyMesh constant/*/polyMesh
+blockMesh
 splitMeshRegions -cellZones -overwrite
 """)
     os.chmod("run.sh", 0o755)
 
 if __name__ == "__main__":
-    create_mesh()
+    create_blockMeshDict()
     create_openfoam_dicts()
     create_run_script()
