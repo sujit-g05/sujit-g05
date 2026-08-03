@@ -10,36 +10,17 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      controlDict;
+    object      fvModels;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamMultiRun;
-startFrom       startTime;
-startTime       0;
-stopAt          endTime;
-endTime         10;
-deltaT          0.001;
-writeControl    timeStep;
-writeInterval   1000;
-purgeWrite      0;
-writeFormat     ascii;
-writePrecision  6;
-writeCompression off;
-timeFormat      general;
-timePrecision   6;
-runTimeModifiable true;
-
-modules
-(
+heater_source
+{
+    type            scalarSemiImplicitSource;
+    volumeMode      specific;
+    selectionMode   all;
+    sources
     {
-        name fluid;
-        type fluidMultiRegion;
-        regions (innerAir outerAir);
+        e           (20317862.0 0);
     }
-    {
-        name solid;
-        type solidMultiRegion;
-        regions (heater cylinder glass);
-    }
-);
+}

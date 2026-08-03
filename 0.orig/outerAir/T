@@ -9,37 +9,18 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      controlDict;
+    class       volScalarField;
+    object      T;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamMultiRun;
-startFrom       startTime;
-startTime       0;
-stopAt          endTime;
-endTime         10;
-deltaT          0.001;
-writeControl    timeStep;
-writeInterval   1000;
-purgeWrite      0;
-writeFormat     ascii;
-writePrecision  6;
-writeCompression off;
-timeFormat      general;
-timePrecision   6;
-runTimeModifiable true;
-
-modules
-(
-    {
-        name fluid;
-        type fluidMultiRegion;
-        regions (innerAir outerAir);
-    }
-    {
-        name solid;
-        type solidMultiRegion;
-        regions (heater cylinder glass);
-    }
-);
+dimensions      [0 0 0 1 0 0 0];
+internalField   uniform 300;
+boundaryField
+{
+    inlet        { type fixedValue; value uniform 300; }
+    outlet       { type inletOutlet; inletValue uniform 300; value uniform 300; }
+    topAndBottom { type zeroGradient; }
+    frontAndBack { type empty; }
+    ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod fluidThermo; value uniform 300; }
+}

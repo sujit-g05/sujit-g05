@@ -10,36 +10,20 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      controlDict;
+    object      fvSchemes;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamMultiRun;
-startFrom       startTime;
-startTime       0;
-stopAt          endTime;
-endTime         10;
-deltaT          0.001;
-writeControl    timeStep;
-writeInterval   1000;
-purgeWrite      0;
-writeFormat     ascii;
-writePrecision  6;
-writeCompression off;
-timeFormat      general;
-timePrecision   6;
-runTimeModifiable true;
-
-modules
-(
-    {
-        name fluid;
-        type fluidMultiRegion;
-        regions (innerAir outerAir);
-    }
-    {
-        name solid;
-        type solidMultiRegion;
-        regions (heater cylinder glass);
-    }
-);
+ddtSchemes { default Euler; }
+gradSchemes { default Gauss linear; }
+divSchemes {
+    default none;
+    div(phi,U) Gauss upwind;
+    div(phi,h) Gauss upwind;
+    div(phi,K) Gauss upwind;
+    div(phid,p) Gauss upwind;
+    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+}
+laplacianSchemes { default Gauss linear orthogonal; }
+interpolationSchemes { default linear; }
+snGradSchemes { default orthogonal; }
