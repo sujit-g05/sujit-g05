@@ -24,7 +24,6 @@ thermoType
     specie          specie;
     energy          sensibleInternalEnergy;
 }
-
 mixture
 {
     specie

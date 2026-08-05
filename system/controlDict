@@ -46,3 +46,71 @@ modules
         regions (heater cylinder glass);
     }
 );
+
+functions
+{
+    probes_cylinder
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          cylinder;
+        fields          (T);
+        probeLocations
+        (
+            (-0.14 -0.0745 0.05) // 1 (bottom inner)
+            ( 0.14 -0.0745 0.05) // 2
+            (-0.14  0.0745 0.05) // 3 (top inner)
+            ( 0.14  0.0745 0.05) // 4
+            (-0.14  0.0749 0.05) // 5 (top outer)
+            ( 0.14  0.0749 0.05) // 6
+            (-0.14 -0.0749 0.05) // 7 (bottom outer)
+            ( 0.14 -0.0749 0.05) // 8
+        );
+    }
+    probes_innerAir
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          innerAir;
+        fields          (T);
+        probeLocations
+        (
+            (0  0.0383 0.05) // 9
+            (0 -0.0383 0.05) // 10
+        );
+    }
+    surfaces_cylinder
+    {
+        type            surfaces;
+        libs            ("libsampling.so");
+        region          cylinder;
+        writeControl    timeStep;
+        writeInterval   1000;
+        surfaceFormat   vtk;
+        fields          (T);
+        interpolationScheme cellPoint;
+        surfaces
+        (
+            upper_surface
+            {
+                type            plane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                    point   (0 0.075 0.05);
+                    normal  (0 1 0);
+                }
+            }
+            lower_surface
+            {
+                type            plane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                    point   (0 -0.075 0.05);
+                    normal  (0 -1 0);
+                }
+            }
+        );
+    }
+}

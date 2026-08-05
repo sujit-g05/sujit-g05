@@ -44,10 +44,8 @@ FoamFile
 """
 
 def setup_constant():
-    # Gravity
     write_file("constant/g", get_header("uniformDimensionedVectorField", "g") + "\ndimensions      [0 1 -2 0 0 0 0];\nvalue           (0 -9.81 0);\n")
 
-    # Solid thermophysical properties
     def get_solid_thermo(rho, cp, kappa):
         return get_header("dictionary", "thermophysicalProperties") + f"""
 thermoType
@@ -60,7 +58,6 @@ thermoType
     specie          specie;
     energy          sensibleInternalEnergy;
 }}
-
 mixture
 {{
     specie
@@ -83,17 +80,13 @@ mixture
     }}
 }}
 """
-
     write_file("constant/heater/thermophysicalProperties", get_solid_thermo(rho_heater, Cp_heater, kappa_heater))
     write_file("constant/cylinder/thermophysicalProperties", get_solid_thermo(rho_cyl, Cp_cyl, kappa_cyl))
     write_file("constant/glass/thermophysicalProperties", get_solid_thermo(rho_glass, Cp_glass, kappa_glass))
 
-    # Radiation properties (fvDOM)
     rad_properties = get_header("dictionary", "radiationProperties") + """
 radiation on;
-
 radiationModel  fvDOM;
-
 fvDOMCoeffs
 {
     nPhi        2;
@@ -101,27 +94,21 @@ fvDOMCoeffs
     tolerance   1e-3;
     maxIter     10;
 }
-
 absorptionEmissionModel constantAbsorptionEmission;
-
 constantAbsorptionEmissionCoeffs
 {
     a           0.01;
     e           0.01;
     E           0;
 }
-
 scatterModel    none;
 sootModel       none;
 """
-
     for solid in solids:
-        # Heater has specific emissivity
         abs_coeff = 0.7 if solid == "heater" else 0.8
         custom_rad = rad_properties.replace("e           0.01;", f"e           {abs_coeff};").replace("a           0.01;", f"a           {abs_coeff};")
         write_file(f"constant/{solid}/radiationProperties", custom_rad)
 
-    # Fluid thermophysical properties
     fluid_thermo = get_header("dictionary", "thermophysicalProperties") + """
 thermoType
 {
@@ -133,7 +120,6 @@ thermoType
     specie          specie;
     energy          sensibleEnthalpy;
 }
-
 mixture
 {
     specie
@@ -159,7 +145,6 @@ mixture
 """
     fluid_turb = get_header("dictionary", "turbulenceProperties") + """
 simulationType RAS;
-
 RAS
 {
     RASModel        kEpsilon;
@@ -172,9 +157,7 @@ RAS
         write_file(f"constant/{fluid}/turbulenceProperties", fluid_turb)
         write_file(f"constant/{fluid}/radiationProperties", rad_properties)
 
-
 def setup_system():
-    # ControlDict
     write_file("system/controlDict", get_header("dictionary", "controlDict") + """
 application     foamMultiRun;
 startFrom       startTime;
@@ -208,9 +191,76 @@ modules
         regions (heater cylinder glass);
     }
 );
+
+functions
+{
+    probes_cylinder
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          cylinder;
+        fields          (T);
+        probeLocations
+        (
+            (-0.14 -0.0745 0.05) // 1 (bottom inner)
+            ( 0.14 -0.0745 0.05) // 2
+            (-0.14  0.0745 0.05) // 3 (top inner)
+            ( 0.14  0.0745 0.05) // 4
+            (-0.14  0.0749 0.05) // 5 (top outer)
+            ( 0.14  0.0749 0.05) // 6
+            (-0.14 -0.0749 0.05) // 7 (bottom outer)
+            ( 0.14 -0.0749 0.05) // 8
+        );
+    }
+    probes_innerAir
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          innerAir;
+        fields          (T);
+        probeLocations
+        (
+            (0  0.0383 0.05) // 9
+            (0 -0.0383 0.05) // 10
+        );
+    }
+    surfaces_cylinder
+    {
+        type            surfaces;
+        libs            ("libsampling.so");
+        region          cylinder;
+        writeControl    timeStep;
+        writeInterval   1000;
+        surfaceFormat   vtk;
+        fields          (T);
+        interpolationScheme cellPoint;
+        surfaces
+        (
+            upper_surface
+            {
+                type            plane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                    point   (0 0.075 0.05);
+                    normal  (0 1 0);
+                }
+            }
+            lower_surface
+            {
+                type            plane;
+                planeType       pointAndNormal;
+                pointAndNormalDict
+                {
+                    point   (0 -0.075 0.05);
+                    normal  (0 -1 0);
+                }
+            }
+        );
+    }
+}
 """)
 
-    # fvModels for heater
     write_file("constant/heater/fvModels", get_header("dictionary", "fvModels") + f"""
 heater_source
 {{
@@ -224,7 +274,6 @@ heater_source
 }}
 """)
 
-    # fvSchemes & fvSolution per region
     solid_schemes = get_header("dictionary", "fvSchemes") + """
 ddtSchemes { default Euler; }
 gradSchemes { default Gauss linear; }
@@ -282,7 +331,6 @@ PIMPLE {
     pRefValue        101325;
 }
 """
-
     for solid in solids:
         write_file(f"system/{solid}/fvSchemes", solid_schemes)
         write_file(f"system/{solid}/fvSolution", solid_solution)
@@ -291,10 +339,8 @@ PIMPLE {
         write_file(f"system/{fluid}/fvSchemes", fluid_schemes)
         write_file(f"system/{fluid}/fvSolution", fluid_solution)
 
-
 def setup_0_orig():
     os.makedirs("0.orig", exist_ok=True)
-
     for solid in solids:
         os.makedirs(f"0.orig/{solid}", exist_ok=True)
         write_file(f"0.orig/{solid}/T", get_header("volScalarField", "T") + """
@@ -327,7 +373,6 @@ boundaryField
 
     for fluid in fluids:
         os.makedirs(f"0.orig/{fluid}", exist_ok=True)
-        # T
         write_file(f"0.orig/{fluid}/T", get_header("volScalarField", "T") + """
 dimensions      [0 0 0 1 0 0 0];
 internalField   uniform 300;
@@ -340,7 +385,6 @@ boundaryField
     ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod fluidThermo; value uniform 300; }
 }
 """)
-        # U
         u_val = "(1 0 0)" if fluid == "outerAir" else "(0 0 0)"
         write_file(f"0.orig/{fluid}/U", get_header("volVectorField", "U") + f"""
 dimensions      [0 1 -1 0 0 0 0];
@@ -354,7 +398,6 @@ boundaryField
     ".*"         {{ type noSlip; }}
 }}
 """)
-        # p_rgh
         write_file(f"0.orig/{fluid}/p_rgh", get_header("volScalarField", "p_rgh") + """
 dimensions      [1 -1 -2 0 0 0 0];
 internalField   uniform 101325;
@@ -367,7 +410,6 @@ boundaryField
     ".*"         { type fixedFluxPressure; value uniform 101325; }
 }
 """)
-        # p
         write_file(f"0.orig/{fluid}/p", get_header("volScalarField", "p") + """
 dimensions      [1 -1 -2 0 0 0 0];
 internalField   uniform 101325;
@@ -380,7 +422,6 @@ boundaryField
     ".*"         { type calculated; value uniform 101325; }
 }
 """)
-        # Turbulence fields
         write_file(f"0.orig/{fluid}/k", get_header("volScalarField", "k") + """
 dimensions      [0 2 -2 0 0 0 0];
 internalField   uniform 0.001;
@@ -441,7 +482,6 @@ boundaryField
     ".*"         { type compressible::alphatWallFunction; Prt 0.85; value uniform 0; }
 }
 """)
-        # Radiation fields
         write_file(f"0.orig/{fluid}/G", get_header("volScalarField", "G") + """
 dimensions      [1 0 -3 0 0 0 0];
 internalField   uniform 0;
