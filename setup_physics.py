@@ -405,6 +405,18 @@ boundaryField
     ".*"         { type epsilonWallFunction; value uniform 0.01; }
 }
 """)
+        write_file(f"0.orig/{fluid}/mut", get_header("volScalarField", "mut") + """
+dimensions      [1 -1 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type mutkWallFunction; value uniform 0; }
+}
+""")
         write_file(f"0.orig/{fluid}/nut", get_header("volScalarField", "nut") + """
 dimensions      [0 2 -1 0 0 0 0];
 internalField   uniform 0;

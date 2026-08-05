@@ -282,9 +282,10 @@ def create_run_script():
     with open("run.sh", "w") as f:
         f.write("""#!/bin/bash
 set -e
-rm -rf constant/polyMesh constant/*/polyMesh
+rm -rf 0 constant/polyMesh constant/*/polyMesh
 blockMesh
 splitMeshRegions -cellZones -overwrite
+cp -r 0.orig 0
 """)
     os.chmod("run.sh", 0o755)
 
