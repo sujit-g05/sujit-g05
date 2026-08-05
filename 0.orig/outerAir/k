@@ -9,31 +9,18 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      radiationProperties;
+    class       volScalarField;
+    object      k;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-radiation on;
-
-radiationModel  fvDOM;
-
-fvDOMCoeffs
+dimensions      [0 2 -2 0 0 0 0];
+internalField   uniform 0.001;
+boundaryField
 {
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
+    inlet        { type fixedValue; value uniform 0.001; }
+    outlet       { type inletOutlet; inletValue uniform 0.001; value uniform 0.001; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type kqRWallFunction; value uniform 0.001; }
 }
-
-absorptionEmissionModel constantAbsorptionEmission;
-
-constantAbsorptionEmissionCoeffs
-{
-    a           0.8;
-    e           0.8;
-    E           0;
-}
-
-scatterModel    none;
-sootModel       none;

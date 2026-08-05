@@ -9,18 +9,18 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      fvModels;
+    class       volScalarField;
+    object      qr;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-heater_source
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
 {
-    type            scalarSemiImplicitSource;
-    volumeMode      specific;
-    selectionMode   all;
-    sources
-    {
-        e           (20317862.0 0);
-    }
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type calculated; value uniform 0; }
 }

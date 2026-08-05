@@ -6,3 +6,10 @@ splitMeshRegions -cellZones -overwrite
 
 rm -rf 0
 cp -r 0.orig 0
+
+
+rm -rf 0
+cp -r 0.orig 0
+
+rm -rf 0
+cp -r 0.orig 0

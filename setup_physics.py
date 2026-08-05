@@ -14,11 +14,7 @@ rho_glass = 2230
 Cp_glass = 830
 kappa_glass = 1.14
 
-# Heat Source
-# 15% of 1500W = 225W.
-# Volume = pi * r^2 * L = pi * (0.0025)^2 * 0.564 = 1.1074e-5 m^3
-# q = 225 / 1.1074e-5 = 20317861.6 W/m^3
-heat_source = 20317862.0
+heat_source = 225.0
 
 solids = ["heater", "cylinder", "glass"]
 fluids = ["innerAir", "outerAir"]
@@ -92,8 +88,38 @@ mixture
     write_file("constant/cylinder/thermophysicalProperties", get_solid_thermo(rho_cyl, Cp_cyl, kappa_cyl))
     write_file("constant/glass/thermophysicalProperties", get_solid_thermo(rho_glass, Cp_glass, kappa_glass))
 
+    # Radiation properties (fvDOM)
+    rad_properties = get_header("dictionary", "radiationProperties") + """
+radiation on;
+
+radiationModel  fvDOM;
+
+fvDOMCoeffs
+{
+    nPhi        2;
+    nTheta      2;
+    tolerance   1e-3;
+    maxIter     10;
+}
+
+absorptionEmissionModel constantAbsorptionEmission;
+
+constantAbsorptionEmissionCoeffs
+{
+    a           0.01;
+    e           0.01;
+    E           0;
+}
+
+scatterModel    none;
+sootModel       none;
+"""
+
     for solid in solids:
-        write_file(f"constant/{solid}/radiationProperties", get_header("dictionary", "radiationProperties") + "\nradiation off;\n")
+        # Heater has specific emissivity
+        abs_coeff = 0.7 if solid == "heater" else 0.8
+        custom_rad = rad_properties.replace("e           0.01;", f"e           {abs_coeff};").replace("a           0.01;", f"a           {abs_coeff};")
+        write_file(f"constant/{solid}/radiationProperties", custom_rad)
 
     # Fluid thermophysical properties
     fluid_thermo = get_header("dictionary", "thermophysicalProperties") + """
@@ -131,10 +157,20 @@ mixture
     }
 }
 """
+    fluid_turb = get_header("dictionary", "turbulenceProperties") + """
+simulationType RAS;
+
+RAS
+{
+    RASModel        kEpsilon;
+    turbulence      on;
+    printCoeffs     on;
+}
+"""
     for fluid in fluids:
         write_file(f"constant/{fluid}/thermophysicalProperties", fluid_thermo)
-        write_file(f"constant/{fluid}/turbulenceProperties", get_header("dictionary", "turbulenceProperties") + "\nsimulationType laminar;\n")
-        write_file(f"constant/{fluid}/radiationProperties", get_header("dictionary", "radiationProperties") + "\nradiation off;\n")
+        write_file(f"constant/{fluid}/turbulenceProperties", fluid_turb)
+        write_file(f"constant/{fluid}/radiationProperties", rad_properties)
 
 
 def setup_system():
@@ -144,8 +180,11 @@ application     foamMultiRun;
 startFrom       startTime;
 startTime       0;
 stopAt          endTime;
-endTime         10;
+endTime         600;
 deltaT          0.001;
+adjustTimeStep  yes;
+maxCo           1.0;
+maxAlphaCo      1.0;
 writeControl    timeStep;
 writeInterval   1000;
 purgeWrite      0;
@@ -172,11 +211,11 @@ modules
 """)
 
     # fvModels for heater
-    write_file("system/heater/fvModels", get_header("dictionary", "fvModels") + f"""
+    write_file("constant/heater/fvModels", get_header("dictionary", "fvModels") + f"""
 heater_source
 {{
     type            scalarSemiImplicitSource;
-    volumeMode      specific;
+    volumeMode      absolute;
     selectionMode   all;
     sources
     {{
@@ -205,6 +244,8 @@ divSchemes {
     div(phi,K) Gauss upwind;
     div(phid,p) Gauss upwind;
     div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(phi,k) Gauss upwind;
+    div(phi,epsilon) Gauss upwind;
 }
 laplacianSchemes { default Gauss linear orthogonal; }
 interpolationSchemes { default linear; }
@@ -214,6 +255,7 @@ snGradSchemes { default orthogonal; }
     solid_solution = get_header("dictionary", "fvSolution") + """
 solvers {
     "e.*" { solver PCG; preconditioner DIC; tolerance 1e-7; relTol 0; }
+    "G.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
     nOuterCorrectors 1;
@@ -228,6 +270,9 @@ solvers {
     "p_rghFinal" { solver PCG; preconditioner DIC; tolerance 1e-7; relTol 0; }
     "U.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
     "h.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
+    "k.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
+    "epsilon.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
+    "G.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
     nOuterCorrectors 1;
@@ -252,7 +297,6 @@ def setup_0_orig():
 
     for solid in solids:
         os.makedirs(f"0.orig/{solid}", exist_ok=True)
-        # T
         write_file(f"0.orig/{solid}/T", get_header("volScalarField", "T") + """
 dimensions      [0 0 0 1 0 0 0];
 internalField   uniform 300;
@@ -260,6 +304,24 @@ boundaryField
 {
     frontAndBack { type empty; }
     ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod solidThermo; value uniform 300; }
+}
+""")
+        write_file(f"0.orig/{solid}/G", get_header("volScalarField", "G") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    frontAndBack { type empty; }
+    ".*"         { type MarshakRadiation; value uniform 0; }
+}
+""")
+        write_file(f"0.orig/{solid}/qr", get_header("volScalarField", "qr") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    frontAndBack { type empty; }
+    ".*"         { type calculated; value uniform 0; }
 }
 """)
 
@@ -318,13 +380,82 @@ boundaryField
     ".*"         { type calculated; value uniform 101325; }
 }
 """)
-
+        # Turbulence fields
+        write_file(f"0.orig/{fluid}/k", get_header("volScalarField", "k") + """
+dimensions      [0 2 -2 0 0 0 0];
+internalField   uniform 0.001;
+boundaryField
+{
+    inlet        { type fixedValue; value uniform 0.001; }
+    outlet       { type inletOutlet; inletValue uniform 0.001; value uniform 0.001; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type kqRWallFunction; value uniform 0.001; }
+}
+""")
+        write_file(f"0.orig/{fluid}/epsilon", get_header("volScalarField", "epsilon") + """
+dimensions      [0 2 -3 0 0 0 0];
+internalField   uniform 0.01;
+boundaryField
+{
+    inlet        { type fixedValue; value uniform 0.01; }
+    outlet       { type inletOutlet; inletValue uniform 0.01; value uniform 0.01; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type epsilonWallFunction; value uniform 0.01; }
+}
+""")
+        write_file(f"0.orig/{fluid}/nut", get_header("volScalarField", "nut") + """
+dimensions      [0 2 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type nutkWallFunction; value uniform 0; }
+}
+""")
+        write_file(f"0.orig/{fluid}/alphat", get_header("volScalarField", "alphat") + """
+dimensions      [1 -1 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type compressible::alphatWallFunction; Prt 0.85; value uniform 0; }
+}
+""")
+        # Radiation fields
+        write_file(f"0.orig/{fluid}/G", get_header("volScalarField", "G") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    inlet        { type MarshakRadiation; value uniform 0; }
+    outlet       { type MarshakRadiation; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type MarshakRadiation; value uniform 0; }
+}
+""")
+        write_file(f"0.orig/{fluid}/qr", get_header("volScalarField", "qr") + """
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type calculated; value uniform 0; }
+}
+""")
 
 if __name__ == "__main__":
     setup_constant()
     setup_system()
     setup_0_orig()
-
-    # Update run script
-    with open("run.sh", "a") as f:
-        f.write("\nrm -rf 0\ncp -r 0.orig 0\n")

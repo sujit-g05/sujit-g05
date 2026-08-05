@@ -9,31 +9,18 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      radiationProperties;
+    class       volScalarField;
+    object      alphat;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-radiation on;
-
-radiationModel  fvDOM;
-
-fvDOMCoeffs
+dimensions      [1 -1 -1 0 0 0 0];
+internalField   uniform 0;
+boundaryField
 {
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
+    inlet        { type calculated; value uniform 0; }
+    outlet       { type calculated; value uniform 0; }
+    topAndBottom { type symmetry; }
+    frontAndBack { type empty; }
+    ".*"         { type compressible::alphatWallFunction; Prt 0.85; value uniform 0; }
 }
-
-absorptionEmissionModel constantAbsorptionEmission;
-
-constantAbsorptionEmissionCoeffs
-{
-    a           0.8;
-    e           0.8;
-    E           0;
-}
-
-scatterModel    none;
-sootModel       none;
