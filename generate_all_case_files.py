@@ -1,22 +1,19 @@
 import os
 
-# Instead of embedding STLs, we rely on generate_stls.py to make STLs.
-# This script creates ONLY the OpenFOAM dictionaries.
-regions = ['air', 'cylinder', 'heater', 'glass']
-fluids = ['air']
-solids = ['cylinder', 'heater', 'glass']
+regions = ["air", "cylinder", "heater", "glass"]
+fluids = ["air"]
+solids = ["cylinder", "heater", "glass"]
 
-# Create base directories
-for d in ['0.orig', 'constant', 'system']:
+for d in ["0.orig", "constant", "system"]:
     os.makedirs(d, exist_ok=True)
     for r in regions:
         os.makedirs(f"{d}/{r}", exist_ok=True)
 
 def write_file(path, content):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
         f.write(content)
 
-# We will read from the currently written files to populate the script
 write_file("constant/g", """/*--------------------------------*- C++ -*----------------------------------*\\
   =========                 |
   \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
@@ -433,6 +430,45 @@ functions
         writeInterval   1;
         fields          (U p T k epsilon);
     }
+    // Probes for temperature sensors in the solid cylinder
+    cylinder_probes
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          cylinder;
+        writeControl    timeStep;
+        writeInterval   10;
+        fields          (T);
+        probeLocations
+        (
+            (-0.2 -0.0741 0) // Sensor 1 (inner bottom left)
+            (0.2 -0.0741 0)  // Sensor 2 (inner bottom right)
+            (-0.2 0.0741 0)  // Sensor 3 (inner top left)
+            (0.2 0.0741 0)   // Sensor 4 (inner top right)
+            (-0.2 0.075 0)   // Sensor 5 (outer top left)
+            (0.2 0.075 0)    // Sensor 6 (outer top right)
+            (-0.2 -0.075 0)  // Sensor 7 (outer bottom left)
+            (0.2 -0.075 0)   // Sensor 8 (outer bottom right)
+        );
+    }
+
+    // Probes for temperature sensors on the heater
+    heater_probes
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          heater;
+        writeControl    timeStep;
+        writeInterval   10;
+        fields          (T);
+        probeLocations
+        (
+            (0 0.00374 0)    // Sensor 9 (heater top center)
+            (0 -0.00374 0)   // Sensor 10 (heater bottom center)
+        );
+    }
+
+
 }
 // ************************************************************************* //
 """)
@@ -1011,7 +1047,6 @@ dictionaryReplacement
                 value           $internalField;
                 Tnbr            T;
                 kappaMethod     solidThermo;
-                value           uniform 300;
             }
         }
     }
@@ -1149,7 +1184,6 @@ dictionaryReplacement
                 value           $internalField;
                 Tnbr            T;
                 kappaMethod     solidThermo;
-                value           uniform 300;
             }
         }
     }
@@ -1324,7 +1358,6 @@ dictionaryReplacement
                 value           $internalField;
                 Tnbr            T;
                 kappaMethod     fluidThermo;
-                value           uniform 300;
             }
         }
     }
@@ -1557,7 +1590,6 @@ dictionaryReplacement
                 value           $internalField;
                 Tnbr            T;
                 kappaMethod     solidThermo;
-                value           uniform 300;
             }
         }
     }
