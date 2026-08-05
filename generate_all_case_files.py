@@ -10,7 +10,9 @@ for d in ["0.orig", "constant", "system"]:
         os.makedirs(f"{d}/{r}", exist_ok=True)
 
 def write_file(path, content):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    dirname = os.path.dirname(path)
+    if dirname:
+        os.makedirs(dirname, exist_ok=True)
     with open(path, "w") as f:
         f.write(content)
 
@@ -2174,5 +2176,20 @@ boundaryField
 }
 // ************************************************************************* //
 """)
+
+write_file("postProcess.sh", """#!/bin/sh
+. ${WM_PROJECT_DIR:-/opt/openfoam13}/bin/tools/RunFunctions 2>/dev/null || true
+
+echo "Running post-processing on existing simulation data..."
+# Use -postProcess directly on the solver to execute the function objects defined in system/controlDict
+# across all previously simulated time directories.
+foamMultiRun -postProcess -func cylinder_probes
+foamMultiRun -postProcess -func heater_probes
+foamMultiRun -postProcess -func cylinderSurface
+
+echo "Post-processing complete. You can find the data in the postProcessing/ directory."
+""")
+import os
+os.chmod("postProcess.sh", 0o755)
 
 print("OpenFOAM case dictionaries generated successfully.")
