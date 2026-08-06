@@ -1,0 +1,140 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     foamMultiRun;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         10;
+deltaT          0.0001;
+adjustTimeStep  yes;
+maxCo           1.0;
+maxDi           1.0;
+writeControl    timeStep;
+writeInterval   10;
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  6;
+writeCompression off;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable true;
+
+modules
+(
+    fluid
+    {
+        regions (air);
+    }
+    solid
+    {
+        regions (cylinder heater glass);
+    }
+);
+
+functions
+{
+    // Monitor maximum temperature in the heater
+    maxT_heater
+    {
+        type            volFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        log             true;
+        writeControl    timeStep;
+        writeInterval   1;
+        region          heater;
+        operation       max;
+        fields          (T);
+    }
+
+
+
+    // Add residual plotting data (so the user can plot graphs using foamMonitor)
+
+    // Extract the cylinder surface temperature for detailed analysis
+    cylinderSurface
+    {
+        type            surfaces;
+        libs            ("libsampling.so");
+        writeControl    timeStep;
+        writeInterval   10;
+        region          air;
+
+        surfaceFormat   vtk;
+
+        fields          (T);
+
+        surfaces
+        {
+            cylinder_surface
+            {
+                type        patch;
+                patches     (".*_to_cylinder");
+                interpolate true;
+            }
+        }
+    }
+
+    residuals
+    {
+        type            residuals;
+        libs            ("libutilityFunctionObjects.so");
+        writeControl    timeStep;
+        writeInterval   1;
+        fields          (U p T k epsilon);
+    }
+    // Probes for temperature sensors in the solid cylinder
+    cylinder_probes
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          cylinder;
+        writeControl    timeStep;
+        writeInterval   10;
+        fields          (T);
+        probeLocations
+        (
+            (-0.2 -0.0741 0) // Sensor 1 (inner bottom left)
+            (0.2 -0.0741 0)  // Sensor 2 (inner bottom right)
+            (-0.2 0.0741 0)  // Sensor 3 (inner top left)
+            (0.2 0.0741 0)   // Sensor 4 (inner top right)
+            (-0.2 0.075 0)   // Sensor 5 (outer top left)
+            (0.2 0.075 0)    // Sensor 6 (outer top right)
+            (-0.2 -0.075 0)  // Sensor 7 (outer bottom left)
+            (0.2 -0.075 0)   // Sensor 8 (outer bottom right)
+        );
+    }
+
+    // Probes for temperature sensors on the heater
+    heater_probes
+    {
+        type            probes;
+        libs            ("libsampling.so");
+        region          heater;
+        writeControl    timeStep;
+        writeInterval   10;
+        fields          (T);
+        probeLocations
+        (
+            (0 0.00374 0)    // Sensor 9 (heater top center)
+            (0 -0.00374 0)   // Sensor 10 (heater bottom center)
+        );
+    }
+
+
+}
+// ************************************************************************* //

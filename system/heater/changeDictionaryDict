@@ -1,0 +1,43 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  13                                    |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system/heater";
+    object      changeDictionaryDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dictionaryReplacement
+{
+
+
+
+
+
+
+    T
+    {
+        boundaryField
+        {
+            ".*_to_.*"
+            {
+                type            compressible::turbulentTemperatureCoupledBaffleMixed;
+                value           $internalField;
+                Tnbr            T;
+                kappaMethod     solidThermo;
+            }
+        }
+    }
+
+
+
+}
+// ************************************************************************* //
