@@ -15,13 +15,11 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 radiation on;
-radiationModel  fvDOM;
-fvDOMCoeffs
+radiationModel  viewFactor;
+viewFactorCoeffs
 {
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
+    smoothing   true;
+    nBands      1;
 }
 absorptionEmissionModel constantAbsorptionEmission;
 constantAbsorptionEmissionCoeffs

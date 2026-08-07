@@ -1,5 +1,6 @@
 import os
 import shutil
+import math
 
 # Properties
 rho_heater = 7250
@@ -10,13 +11,9 @@ rho_cyl = 1570
 Cp_cyl = 857.41
 kappa_cyl = 0.84126
 
-rho_glass = 2230
-Cp_glass = 830
-kappa_glass = 1.14
+heat_source = 20317861.6
 
-heat_source = 225.0
-
-solids = ["heater", "cylinder", "glass"]
+solids = ["heater", "cylinder"]
 fluids = ["innerAir", "outerAir"]
 all_regions = solids + fluids
 
@@ -82,17 +79,14 @@ mixture
 """
     write_file("constant/heater/thermophysicalProperties", get_solid_thermo(rho_heater, Cp_heater, kappa_heater))
     write_file("constant/cylinder/thermophysicalProperties", get_solid_thermo(rho_cyl, Cp_cyl, kappa_cyl))
-    write_file("constant/glass/thermophysicalProperties", get_solid_thermo(rho_glass, Cp_glass, kappa_glass))
 
     rad_properties = get_header("dictionary", "radiationProperties") + """
 radiation on;
-radiationModel  fvDOM;
-fvDOMCoeffs
+radiationModel  viewFactor;
+viewFactorCoeffs
 {
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
+    smoothing   true;
+    nBands      1;
 }
 absorptionEmissionModel constantAbsorptionEmission;
 constantAbsorptionEmissionCoeffs
@@ -104,10 +98,9 @@ constantAbsorptionEmissionCoeffs
 scatterModel    none;
 sootModel       none;
 """
+    # Solids don't compute S2S themselves directly through viewFactor, they use opaqueSolid or radiation off
     for solid in solids:
-        abs_coeff = 0.7 if solid == "heater" else 0.8
-        custom_rad = rad_properties.replace("e           0.01;", f"e           {abs_coeff};").replace("a           0.01;", f"a           {abs_coeff};")
-        write_file(f"constant/{solid}/radiationProperties", custom_rad)
+        write_file(f"constant/{solid}/radiationProperties", get_header("dictionary", "radiationProperties") + "\nradiation off;\n")
 
     fluid_thermo = get_header("dictionary", "thermophysicalProperties") + """
 thermoType
@@ -158,7 +151,37 @@ RAS
         write_file(f"constant/{fluid}/radiationProperties", rad_properties)
 
 def setup_system():
-    write_file("system/controlDict", get_header("dictionary", "controlDict") + """
+    angles = [0, 90, 180, 270]
+    r_in = 0.0741
+    r_out = 0.075
+    z = 0.05
+
+    cyl_probes = ""
+    probe_id = 1
+    for angle in angles:
+        rad = math.radians(angle)
+        x = r_in * math.cos(rad)
+        y = r_in * math.sin(rad)
+        cyl_probes += f"            ({x:8.5f} {y:8.5f} {z}) // {probe_id} (inner)\n"
+        probe_id += 1
+
+    for angle in angles:
+        rad = math.radians(angle)
+        x = r_out * math.cos(rad)
+        y = r_out * math.sin(rad)
+        cyl_probes += f"            ({x:8.5f} {y:8.5f} {z}) // {probe_id} (outer)\n"
+        probe_id += 1
+
+    air_probes = ""
+    r_air = 0.0383
+    for angle in [90, 270]:
+        rad = math.radians(angle)
+        x = r_air * math.cos(rad)
+        y = r_air * math.sin(rad)
+        air_probes += f"            ({x:8.5f} {y:8.5f} {z}) // {probe_id} (air)\n"
+        probe_id += 1
+
+    write_file("system/controlDict", get_header("dictionary", "controlDict") + f"""
 application     foamMultiRun;
 startFrom       startTime;
 startTime       0;
@@ -180,52 +203,42 @@ runTimeModifiable true;
 
 modules
 (
-    {
+    {{
         name fluid;
         type fluidMultiRegion;
         regions (innerAir outerAir);
-    }
-    {
+    }}
+    {{
         name solid;
         type solidMultiRegion;
-        regions (heater cylinder glass);
-    }
+        regions (heater cylinder);
+    }}
 );
 
 functions
-{
+{{
     probes_cylinder
-    {
+    {{
         type            probes;
         libs            ("libsampling.so");
         region          cylinder;
         fields          (T);
         probeLocations
         (
-            (-0.14 -0.0745 0.05) // 1 (bottom inner)
-            ( 0.14 -0.0745 0.05) // 2
-            (-0.14  0.0745 0.05) // 3 (top inner)
-            ( 0.14  0.0745 0.05) // 4
-            (-0.14  0.0749 0.05) // 5 (top outer)
-            ( 0.14  0.0749 0.05) // 6
-            (-0.14 -0.0749 0.05) // 7 (bottom outer)
-            ( 0.14 -0.0749 0.05) // 8
-        );
-    }
+{cyl_probes}        );
+    }}
     probes_innerAir
-    {
+    {{
         type            probes;
         libs            ("libsampling.so");
         region          innerAir;
         fields          (T);
         probeLocations
         (
-            (0  0.0383 0.05) // 9
-            (0 -0.0383 0.05) // 10
-        );
-    }
+{air_probes}        );
+    }}
     surfaces_cylinder
-    {
+    {{
         type            surfaces;
         libs            ("libsampling.so");
         region          cylinder;
@@ -237,35 +250,35 @@ functions
         surfaces
         (
             upper_surface
-            {
+            {{
                 type            plane;
                 planeType       pointAndNormal;
                 pointAndNormalDict
-                {
+                {{
                     point   (0 0.075 0.05);
                     normal  (0 1 0);
-                }
-            }
+                }}
+            }}
             lower_surface
-            {
+            {{
                 type            plane;
                 planeType       pointAndNormal;
                 pointAndNormalDict
-                {
+                {{
                     point   (0 -0.075 0.05);
                     normal  (0 -1 0);
-                }
-            }
+                }}
+            }}
         );
-    }
-}
+    }}
+}}
 """)
 
     write_file("constant/heater/fvModels", get_header("dictionary", "fvModels") + f"""
 heater_source
 {{
     type            scalarSemiImplicitSource;
-    volumeMode      absolute;
+    volumeMode      specific;
     selectionMode   all;
     sources
     {{
@@ -273,6 +286,19 @@ heater_source
     }}
 }}
 """)
+
+    vf_dict = get_header("dictionary", "viewFactorDict") + """
+writeViewFactorMatrix true;
+useAgglomeration true;
+maxNv    100;
+nFacesInCoarsestLevel 5;
+featureAngle 20;
+
+writeFacesAgglomeration true;
+"""
+    for region in all_regions:
+        write_file(f"system/{region}/viewFactorDict", vf_dict)
+
 
     solid_schemes = get_header("dictionary", "fvSchemes") + """
 ddtSchemes { default Euler; }
@@ -292,7 +318,7 @@ divSchemes {
     div(phi,h) Gauss upwind;
     div(phi,K) Gauss upwind;
     div(phid,p) Gauss upwind;
-    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(devRhoReff) Gauss linear;
     div(phi,k) Gauss upwind;
     div(phi,epsilon) Gauss upwind;
 }
@@ -304,7 +330,7 @@ snGradSchemes { default orthogonal; }
     solid_solution = get_header("dictionary", "fvSolution") + """
 solvers {
     "e.*" { solver PCG; preconditioner DIC; tolerance 1e-7; relTol 0; }
-    "G.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
+    "q.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
     nOuterCorrectors 1;
@@ -321,7 +347,7 @@ solvers {
     "h.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
     "k.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
     "epsilon.*" { solver PBiCGStab; preconditioner DILU; tolerance 1e-7; relTol 0.1; }
-    "G.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
+    "q.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
     nOuterCorrectors 1;
@@ -352,13 +378,13 @@ boundaryField
     ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod solidThermo; value uniform 300; }
 }
 """)
-        write_file(f"0.orig/{solid}/G", get_header("volScalarField", "G") + """
+        write_file(f"0.orig/{solid}/q", get_header("volScalarField", "q") + """
 dimensions      [1 0 -3 0 0 0 0];
 internalField   uniform 0;
 boundaryField
 {
     frontAndBack { type empty; }
-    ".*"         { type MarshakRadiation; value uniform 0; }
+    ".*"         { type calculated; value uniform 0; }
 }
 """)
         write_file(f"0.orig/{solid}/qr", get_header("volScalarField", "qr") + """
@@ -380,7 +406,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform 300; }
     outlet       { type inletOutlet; inletValue uniform 300; value uniform 300; }
-    topAndBottom { type zeroGradient; }
+    outerBoundary { type zeroGradient; }
     frontAndBack { type empty; }
     ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod fluidThermo; value uniform 300; }
 }
@@ -393,7 +419,7 @@ boundaryField
 {{
     inlet        {{ type fixedValue; value uniform {u_val}; }}
     outlet       {{ type inletOutlet; inletValue uniform (0 0 0); value uniform {u_val}; }}
-    topAndBottom {{ type symmetry; }}
+    outerBoundary {{ type symmetry; }}
     frontAndBack {{ type empty; }}
     ".*"         {{ type noSlip; }}
 }}
@@ -405,7 +431,7 @@ boundaryField
 {
     inlet        { type zeroGradient; }
     outlet       { type fixedValue; value uniform 101325; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type fixedFluxPressure; value uniform 101325; }
 }
@@ -417,7 +443,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 101325; }
     outlet       { type calculated; value uniform 101325; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type calculated; value uniform 101325; }
 }
@@ -429,7 +455,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform 0.001; }
     outlet       { type inletOutlet; inletValue uniform 0.001; value uniform 0.001; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type kqRWallFunction; value uniform 0.001; }
 }
@@ -441,7 +467,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform 0.01; }
     outlet       { type inletOutlet; inletValue uniform 0.01; value uniform 0.01; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type epsilonWallFunction; value uniform 0.01; }
 }
@@ -453,7 +479,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type mutkWallFunction; value uniform 0; }
 }
@@ -465,7 +491,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type nutkWallFunction; value uniform 0; }
 }
@@ -477,21 +503,21 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type compressible::alphatWallFunction; Prt 0.85; value uniform 0; }
 }
 """)
-        write_file(f"0.orig/{fluid}/G", get_header("volScalarField", "G") + """
+        write_file(f"0.orig/{fluid}/q", get_header("volScalarField", "q") + """
 dimensions      [1 0 -3 0 0 0 0];
 internalField   uniform 0;
 boundaryField
 {
-    inlet        { type MarshakRadiation; value uniform 0; }
-    outlet       { type MarshakRadiation; value uniform 0; }
-    topAndBottom { type symmetry; }
+    inlet        { type greyDiffusiveRadiationViewFactor; emissivity uniform 1.0; value uniform 0; }
+    outlet       { type greyDiffusiveRadiationViewFactor; emissivity uniform 1.0; value uniform 0; }
+    outerBoundary { type greyDiffusiveRadiationViewFactor; emissivity uniform 1.0; value uniform 0; }
     frontAndBack { type empty; }
-    ".*"         { type MarshakRadiation; value uniform 0; }
+    ".*"         { type greyDiffusiveRadiationViewFactor; emissivity uniform 0.8; value uniform 0; }
 }
 """)
         write_file(f"0.orig/{fluid}/qr", get_header("volScalarField", "qr") + """
@@ -501,7 +527,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type calculated; value uniform 0; }
     frontAndBack { type empty; }
     ".*"         { type calculated; value uniform 0; }
 }

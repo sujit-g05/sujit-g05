@@ -14,21 +14,4 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-radiation on;
-radiationModel  fvDOM;
-fvDOMCoeffs
-{
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
-}
-absorptionEmissionModel constantAbsorptionEmission;
-constantAbsorptionEmissionCoeffs
-{
-    a           0.7;
-    e           0.7;
-    E           0;
-}
-scatterModel    none;
-sootModel       none;
+radiation off;

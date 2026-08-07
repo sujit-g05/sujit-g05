@@ -17,10 +17,10 @@ FoamFile
 heater_source
 {
     type            scalarSemiImplicitSource;
-    volumeMode      absolute;
+    volumeMode      specific;
     selectionMode   all;
     sources
     {
-        e           (225.0 0);
+        e           (20317861.6 0);
     }
 }

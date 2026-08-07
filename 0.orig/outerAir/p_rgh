@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type zeroGradient; }
     outlet       { type fixedValue; value uniform 101325; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type fixedFluxPressure; value uniform 101325; }
 }

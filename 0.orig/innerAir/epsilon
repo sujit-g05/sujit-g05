@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform 0.01; }
     outlet       { type inletOutlet; inletValue uniform 0.01; value uniform 0.01; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type epsilonWallFunction; value uniform 0.01; }
 }

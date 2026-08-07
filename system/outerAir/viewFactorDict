@@ -9,18 +9,15 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       volScalarField;
-    object      T;
+    class       dictionary;
+    object      viewFactorDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 1 0 0 0];
-internalField   uniform 300;
-boundaryField
-{
-    inlet        { type fixedValue; value uniform 300; }
-    outlet       { type inletOutlet; inletValue uniform 300; value uniform 300; }
-    outerBoundary { type zeroGradient; }
-    frontAndBack { type empty; }
-    ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod fluidThermo; value uniform 300; }
-}
+writeViewFactorMatrix true;
+useAgglomeration true;
+maxNv    100;
+nFacesInCoarsestLevel 5;
+featureAngle 20;
+
+writeFacesAgglomeration true;

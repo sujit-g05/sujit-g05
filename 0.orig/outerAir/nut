@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type nutkWallFunction; value uniform 0; }
 }

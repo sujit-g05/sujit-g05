@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform 300; }
     outlet       { type inletOutlet; inletValue uniform 300; value uniform 300; }
-    topAndBottom { type zeroGradient; }
+    outerBoundary { type zeroGradient; }
     frontAndBack { type empty; }
     ".*"         { type compressible::turbulentTemperatureRadCoupledMixed; Tnbr T; kappaMethod fluidThermo; value uniform 300; }
 }

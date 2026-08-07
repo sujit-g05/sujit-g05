@@ -43,7 +43,7 @@ modules
     {
         name solid;
         type solidMultiRegion;
-        regions (heater cylinder glass);
+        regions (heater cylinder);
     }
 );
 
@@ -57,14 +57,14 @@ functions
         fields          (T);
         probeLocations
         (
-            (-0.14 -0.0745 0.05) // 1 (bottom inner)
-            ( 0.14 -0.0745 0.05) // 2
-            (-0.14  0.0745 0.05) // 3 (top inner)
-            ( 0.14  0.0745 0.05) // 4
-            (-0.14  0.0749 0.05) // 5 (top outer)
-            ( 0.14  0.0749 0.05) // 6
-            (-0.14 -0.0749 0.05) // 7 (bottom outer)
-            ( 0.14 -0.0749 0.05) // 8
+            ( 0.07410  0.00000 0.05) // 1 (inner)
+            ( 0.00000  0.07410 0.05) // 2 (inner)
+            (-0.07410  0.00000 0.05) // 3 (inner)
+            (-0.00000 -0.07410 0.05) // 4 (inner)
+            ( 0.07500  0.00000 0.05) // 5 (outer)
+            ( 0.00000  0.07500 0.05) // 6 (outer)
+            (-0.07500  0.00000 0.05) // 7 (outer)
+            (-0.00000 -0.07500 0.05) // 8 (outer)
         );
     }
     probes_innerAir
@@ -75,8 +75,8 @@ functions
         fields          (T);
         probeLocations
         (
-            (0  0.0383 0.05) // 9
-            (0 -0.0383 0.05) // 10
+            ( 0.00000  0.03830 0.05) // 9 (air)
+            (-0.00000 -0.03830 0.05) // 10 (air)
         );
     }
     surfaces_cylinder

@@ -22,7 +22,7 @@ divSchemes {
     div(phi,h) Gauss upwind;
     div(phi,K) Gauss upwind;
     div(phid,p) Gauss upwind;
-    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(devRhoReff) Gauss linear;
     div(phi,k) Gauss upwind;
     div(phi,epsilon) Gauss upwind;
 }

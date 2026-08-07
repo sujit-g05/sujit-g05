@@ -23,34 +23,55 @@ def write_file(filepath, content):
     with open(filepath, 'w') as f:
         f.write(content)
 
-write_file("system/cylinder/probes", get_header("dictionary", "probes") + """
+import math
+angles = [0, 90, 180, 270]
+r_in = 0.0741
+r_out = 0.075
+z = 0.05
+
+cyl_probes = ""
+probe_id = 1
+for angle in angles:
+    rad = math.radians(angle)
+    x = r_in * math.cos(rad)
+    y = r_in * math.sin(rad)
+    cyl_probes += f"    ({x:8.5f} {y:8.5f} {z}) // {probe_id} (inner)\n"
+    probe_id += 1
+
+for angle in angles:
+    rad = math.radians(angle)
+    x = r_out * math.cos(rad)
+    y = r_out * math.sin(rad)
+    cyl_probes += f"    ({x:8.5f} {y:8.5f} {z}) // {probe_id} (outer)\n"
+    probe_id += 1
+
+air_probes = ""
+r_air = 0.0383
+for angle in [90, 270]:
+    rad = math.radians(angle)
+    x = r_air * math.cos(rad)
+    y = r_air * math.sin(rad)
+    air_probes += f"    ({x:8.5f} {y:8.5f} {z}) // {probe_id} (air)\n"
+    probe_id += 1
+
+write_file("system/cylinder/probes", get_header("dictionary", "probes") + f"""
 type            probes;
 libs            ("libsampling.so");
 region          cylinder;
 fields          (T);
 probeLocations
 (
-    (-0.14 -0.0745 0.05) // 1
-    ( 0.14 -0.0745 0.05) // 2
-    (-0.14  0.0745 0.05) // 3
-    ( 0.14  0.0745 0.05) // 4
-    (-0.14  0.0749 0.05) // 5
-    ( 0.14  0.0749 0.05) // 6
-    (-0.14 -0.0749 0.05) // 7
-    ( 0.14 -0.0749 0.05) // 8
-);
+{cyl_probes});
 """)
 
-write_file("system/innerAir/probes", get_header("dictionary", "probes") + """
+write_file("system/innerAir/probes", get_header("dictionary", "probes") + f"""
 type            probes;
 libs            ("libsampling.so");
 region          innerAir;
 fields          (T);
 probeLocations
 (
-    (0  0.0383 0.05) // 9
-    (0 -0.0383 0.05) // 10
-);
+{air_probes});
 """)
 
 write_file("system/cylinder/surfaces", get_header("dictionary", "surfaces") + """

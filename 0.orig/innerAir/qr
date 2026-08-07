@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type calculated; value uniform 0; }
     outlet       { type calculated; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type calculated; value uniform 0; }
     frontAndBack { type empty; }
     ".*"         { type calculated; value uniform 0; }
 }

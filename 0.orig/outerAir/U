@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type fixedValue; value uniform (1 0 0); }
     outlet       { type inletOutlet; inletValue uniform (0 0 0); value uniform (1 0 0); }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type noSlip; }
 }

@@ -20,7 +20,7 @@ boundaryField
 {
     inlet        { type MarshakRadiation; value uniform 0; }
     outlet       { type MarshakRadiation; value uniform 0; }
-    topAndBottom { type symmetry; }
+    outerBoundary { type symmetry; }
     frontAndBack { type empty; }
     ".*"         { type MarshakRadiation; value uniform 0; }
 }
