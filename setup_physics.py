@@ -287,7 +287,7 @@ heater_source
 }}
 """)
 
-    vf_dict = get_header("dictionary", "viewFactorDict") + """
+    vf_dict = get_header("dictionary", "viewFactorsDict") + """
 writeViewFactorMatrix true;
 useAgglomeration true;
 maxNv    100;
@@ -297,7 +297,7 @@ featureAngle 20;
 writeFacesAgglomeration true;
 """
     for region in all_regions:
-        write_file(f"system/{region}/viewFactorDict", vf_dict)
+        write_file(f"system/{region}/viewFactorsDict", vf_dict)
 
 
     solid_schemes = get_header("dictionary", "fvSchemes") + """
