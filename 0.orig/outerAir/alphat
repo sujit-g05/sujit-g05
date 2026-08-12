@@ -22,7 +22,7 @@ boundaryField
     frontAndBack { type empty; }
     ".*_to_.*"
     {
-        type            compressible::alphatWallFunction;
+        type            alphatWallFunction;
         Prt             0.85;
         value           uniform 0;
     }

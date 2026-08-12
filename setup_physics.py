@@ -81,6 +81,8 @@ divSchemes {
     div(phi,k) Gauss upwind;
     div(phi,epsilon) Gauss upwind;
     div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
+    div(I) Gauss upwind;
+    div(ji,I) Gauss upwind;
 }
 laplacianSchemes { default Gauss linear orthogonal; }
 interpolationSchemes { default linear; }
@@ -110,6 +112,13 @@ solvers
         tolerance       1e-7;
         relTol          0.1;
     }
+    "(G|I.*)"
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }
 }
 PIMPLE
 {
@@ -131,7 +140,8 @@ writeFacesByRays    true;
 nFacesInCoarsestLevel 10;
 featureAngle        180;
 """
-write_file("system/innerAir/viewFactorsDict", vfd)
+for region in fluids:
+    write_file(f"system/{region}/viewFactorsDict", vfd)
 
 
 # -----------------
@@ -181,7 +191,7 @@ RAS
     printCoeffs     on;
 }
 """
-        rad = "radiation on;\nradiationModel viewFactor;\n" if region == 'innerAir' else "radiation off;\n"
+        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       0;\n    e       0;\n    E       0;\n}\nscatterModel none;\n'
     else:
         # solids
         if region == 'heater':
@@ -266,7 +276,7 @@ for region in regions:
     frontAndBack {{ type empty; }}
     ".*_to_.*"
     {{
-        type            compressible::turbulentTemperatureCoupledBaffleMixed;
+        type            turbulentTemperatureRadCoupledMixed;
         Tnbr            T;
         kappaMethod     {'fluidThermo' if is_fluid else 'solidThermo'};
         value           uniform 300;
@@ -282,7 +292,7 @@ for region in regions:
     frontAndBack {{ type empty; }}
     ".*_to_.*"
     {{
-        type            compressible::alphatWallFunction;
+        type            alphatWallFunction;
         Prt             0.85;
         value           uniform 0;
     }}
@@ -341,34 +351,45 @@ for region in regions:
         write_file(f"0.orig/{region}/nut", create_field("nut", "[0 2 -1 0 0 0 0]", 0, b_nut))
         write_file(f"0.orig/{region}/mut", create_field("mut", "[1 -1 -1 0 0 0 0]", 0, b_nut))
 
-        if region == 'innerAir':
-            b_q = f"""
+
+        # fvDOM fields: G, q, qr (calculated) and IDefault
+        b_G = f"""
+    frontAndBack {{ type empty; }}
+    ".*" {{ type calculated; value uniform 0; }}
+"""
+        write_file(f"0.orig/{region}/G", create_field("G", "[1 0 -3 0 0 0 0]", 0, b_G))
+
+        b_IDefault = f"""
     frontAndBack {{ type empty; }}
     ".*heater.*"
     {{
-        type            greyDiffusiveRadiationViewFactor;
+        type            greyDiffusiveRadiation;
         emissivityMode  lookup;
-        emissivity      0.7;
+        emissivity      uniform 0.7;
         value           uniform 0;
     }}
     ".*cylinder.*"
     {{
-        type            greyDiffusiveRadiationViewFactor;
+        type            greyDiffusiveRadiation;
         emissivityMode  lookup;
-        emissivity      0.8;
+        emissivity      uniform 0.8;
         value           uniform 0;
     }}
     ".*"
     {{
-        type            greyDiffusiveRadiationViewFactor;
+        type            greyDiffusiveRadiation;
         emissivityMode  lookup;
-        emissivity      1.0;
+        emissivity      uniform 1.0;
         value           uniform 0;
     }}
 """
-            write_file(f"0.orig/{region}/q", create_field("q", "[1 0 -3 0 0 0 0]", 0, b_q))
-            # Wait, viewFactor also requires G, although not used? No, memory says G is not used.
-            # But let's add G just in case to avoid missing field errors.
-            write_file(f"0.orig/{region}/G", create_field("G", "[1 0 -3 0 0 0 0]", 0, b_q.replace("greyDiffusiveRadiationViewFactor", "calculated")))
+        write_file(f"0.orig/{region}/IDefault", create_field("IDefault", "[1 0 -3 0 0 0 0]", 0, b_IDefault))
+
+        b_q = f"""
+    frontAndBack {{ type empty; }}
+    ".*" {{ type calculated; value uniform 0; }}
+"""
+        write_file(f"0.orig/{region}/q", create_field("q", "[1 0 -3 0 0 0 0]", 0, b_q))
+        write_file(f"0.orig/{region}/qr", create_field("qr", "[1 0 -3 0 0 0 0]", 0, b_q))
 
 print("setup_physics.py complete.")

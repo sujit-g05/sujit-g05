@@ -10,26 +10,36 @@ FoamFile
     version     2.0;
     format      ascii;
     class       volScalarField;
-    object      T;
+    object      IDefault;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 1 0 0 0];
-internalField   uniform 300;
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
 boundaryField
 {
 
     frontAndBack { type empty; }
-    ".*_to_.*"
+    ".*heater.*"
     {
-        type            turbulentTemperatureRadCoupledMixed;
-        Tnbr            T;
-        kappaMethod     solidThermo;
-        value           uniform 300;
+        type            greyDiffusiveRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 0.7;
+        value           uniform 0;
     }
-    inlet { type fixedValue; value uniform 300; }
-    outlet { type inletOutlet; inletValue uniform 300; value uniform 300; }
-    outerBoundary { type zeroGradient; }
-    ".*" { type zeroGradient; }
+    ".*cylinder.*"
+    {
+        type            greyDiffusiveRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 0.8;
+        value           uniform 0;
+    }
+    ".*"
+    {
+        type            greyDiffusiveRadiation;
+        emissivityMode  lookup;
+        emissivity      uniform 1.0;
+        value           uniform 0;
+    }
 
 }

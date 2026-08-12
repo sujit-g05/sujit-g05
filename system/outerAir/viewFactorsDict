@@ -10,25 +10,11 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      radiationProperties;
+    object      viewFactorsDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-radiation on;
-radiationModel fvDOM;
 
-fvDOMCoeffs
-{
-    nPhi        2;
-    nTheta      2;
-    tolerance   1e-3;
-    maxIter     10;
-}
-
-absorptionEmissionModel constantAbsorptionEmission;
-constantAbsorptionEmissionCoeffs
-{
-    a       0;
-    e       0;
-    E       0;
-}
-scatterModel none;
+writeViewFactorMatrix true;
+writeFacesByRays    true;
+nFacesInCoarsestLevel 10;
+featureAngle        180;

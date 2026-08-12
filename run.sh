@@ -14,9 +14,6 @@ else
     # Setup initial fields
     cp -r 0.orig 0
 
-    # Radiation setup for innerAir
-    faceAgglomerate -region innerAir -dict system/innerAir/viewFactorsDict
-    viewFactorsGen -region innerAir
 
     # Run solver
     foamMultiRun
