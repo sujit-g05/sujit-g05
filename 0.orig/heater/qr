@@ -9,12 +9,17 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      viewFactorsDict;
+    class       volScalarField;
+    object      qr;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-writeViewFactorMatrix true;
-writeFacesByRays    true;
-nFacesInCoarsestLevel 10;
-featureAngle        180;
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
+{
+
+    frontAndBack { type empty; }
+    ".*" { type calculated; value uniform 0; }
+
+}

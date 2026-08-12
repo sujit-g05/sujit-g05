@@ -133,15 +133,7 @@ for region in regions:
     write_file(f"system/{region}/fvSchemes", fvSchemes)
     write_file(f"system/{region}/fvSolution", fvSolution)
 
-# View factors dict for innerAir
-vfd = get_header("dictionary", "viewFactorsDict") + """
-writeViewFactorMatrix true;
-writeFacesByRays    true;
-nFacesInCoarsestLevel 10;
-featureAngle        180;
-"""
-for region in fluids:
-    write_file(f"system/{region}/viewFactorsDict", vfd)
+
 
 
 # -----------------
@@ -229,7 +221,7 @@ mixture
 }}
 """
         turb = ""
-        rad = "radiation off;\n"
+        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       0;\n    e       0;\n    E       0;\n}\nscatterModel none;\n'
 
     write_file(f"constant/{region}/thermophysicalProperties", get_header("dictionary", "thermophysicalProperties") + thermo)
     write_file(f"constant/{region}/radiationProperties", get_header("dictionary", "radiationProperties") + rad)
@@ -288,7 +280,8 @@ for region in regions:
 """
     write_file(f"0.orig/{region}/T", create_field("T", "[0 0 0 1 0 0 0]", 300, b_T))
 
-    b_alphat = f"""
+    if is_fluid:
+        b_alphat = f"""
     frontAndBack {{ type empty; }}
     ".*_to_.*"
     {{
@@ -301,9 +294,8 @@ for region in regions:
     outerBoundary {{ type calculated; value uniform 0; }}
     ".*" {{ type calculated; value uniform 0; }}
 """
-    write_file(f"0.orig/{region}/alphat", create_field("alphat", "[1 -1 -1 0 0 0 0]", 0, b_alphat))
+        write_file(f"0.orig/{region}/alphat", create_field("alphat", "[1 -1 -1 0 0 0 0]", 0, b_alphat))
 
-    if is_fluid:
         b_p = f"""
     frontAndBack {{ type empty; }}
     inlet {{ type zeroGradient; }}
@@ -353,13 +345,13 @@ for region in regions:
 
 
         # fvDOM fields: G, q, qr (calculated) and IDefault
-        b_G = f"""
+    b_G = f"""
     frontAndBack {{ type empty; }}
     ".*" {{ type calculated; value uniform 0; }}
 """
-        write_file(f"0.orig/{region}/G", create_field("G", "[1 0 -3 0 0 0 0]", 0, b_G))
+    write_file(f"0.orig/{region}/G", create_field("G", "[1 0 -3 0 0 0 0]", 0, b_G))
 
-        b_IDefault = f"""
+    b_IDefault = f"""
     frontAndBack {{ type empty; }}
     ".*heater.*"
     {{
@@ -383,13 +375,13 @@ for region in regions:
         value           uniform 0;
     }}
 """
-        write_file(f"0.orig/{region}/IDefault", create_field("IDefault", "[1 0 -3 0 0 0 0]", 0, b_IDefault))
+    write_file(f"0.orig/{region}/IDefault", create_field("IDefault", "[1 0 -3 0 0 0 0]", 0, b_IDefault))
 
-        b_q = f"""
+    b_q = f"""
     frontAndBack {{ type empty; }}
     ".*" {{ type calculated; value uniform 0; }}
 """
-        write_file(f"0.orig/{region}/q", create_field("q", "[1 0 -3 0 0 0 0]", 0, b_q))
-        write_file(f"0.orig/{region}/qr", create_field("qr", "[1 0 -3 0 0 0 0]", 0, b_q))
+    write_file(f"0.orig/{region}/q", create_field("q", "[1 0 -3 0 0 0 0]", 0, b_q))
+    write_file(f"0.orig/{region}/qr", create_field("qr", "[1 0 -3 0 0 0 0]", 0, b_q))
 
 print("setup_physics.py complete.")
