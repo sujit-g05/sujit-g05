@@ -10,40 +10,35 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      controlDict;
+    object      thermophysicalProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamMultiRun;
-startFrom       startTime;
-startTime       0;
-stopAt          endTime;
-endTime         10; // short for testing
-deltaT          0.01;
-writeControl    adjustableRunTime;
-writeInterval   1;
-purgeWrite      0;
-writeFormat     ascii;
-writePrecision  6;
-writeCompression off;
-timeFormat      general;
-timePrecision   6;
-runTimeModifiable true;
-
-modules
-(
-    fluid
-    {
-        type fluid;
-        regions (innerAir outerAir);
-    }
-    solid
-    {
-        type solid;
-        regions (heater cylinder);
-    }
-);
-
-functions
+thermoType
 {
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+mixture
+{
+    specie
+    {
+        nMoles      1;
+        molWeight   28.96;
+    }
+    thermodynamics
+    {
+        Cp          1004;
+        Hf          0;
+    }
+    transport
+    {
+        mu          1.8e-05;
+        Pr          0.7;
+    }
 }

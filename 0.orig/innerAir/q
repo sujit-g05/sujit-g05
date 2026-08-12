@@ -9,41 +9,37 @@ FoamFile
 {
     version     2.0;
     format      ascii;
-    class       dictionary;
-    object      controlDict;
+    class       volScalarField;
+    object      q;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     foamMultiRun;
-startFrom       startTime;
-startTime       0;
-stopAt          endTime;
-endTime         10; // short for testing
-deltaT          0.01;
-writeControl    adjustableRunTime;
-writeInterval   1;
-purgeWrite      0;
-writeFormat     ascii;
-writePrecision  6;
-writeCompression off;
-timeFormat      general;
-timePrecision   6;
-runTimeModifiable true;
-
-modules
-(
-    fluid
-    {
-        type fluid;
-        regions (innerAir outerAir);
-    }
-    solid
-    {
-        type solid;
-        regions (heater cylinder);
-    }
-);
-
-functions
+dimensions      [1 0 -3 0 0 0 0];
+internalField   uniform 0;
+boundaryField
 {
+
+    frontAndBack { type empty; }
+    ".*heater.*"
+    {
+        type            greyDiffusiveRadiationViewFactor;
+        emissivityMode  lookup;
+        emissivity      0.7;
+        value           uniform 0;
+    }
+    ".*cylinder.*"
+    {
+        type            greyDiffusiveRadiationViewFactor;
+        emissivityMode  lookup;
+        emissivity      0.8;
+        value           uniform 0;
+    }
+    ".*"
+    {
+        type            greyDiffusiveRadiationViewFactor;
+        emissivityMode  lookup;
+        emissivity      1.0;
+        value           uniform 0;
+    }
+
 }
