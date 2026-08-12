@@ -91,47 +91,76 @@ wallDist { method meshWave; }
 """
 write_file("system/fvSchemes", fvSchemes)
 
-fvSolution = get_header("dictionary", "fvSolution") + """
-solvers
-{
-    "rho.*"
+
+
+for region in regions:
+    write_file(f"system/{region}/fvSchemes", fvSchemes)
+    is_fluid = region in fluids
+
+    # Fluid energy equation is asymmetric, Solid is symmetric
+    h_e_solver = """    "(h|e).*"
     {
-        solver          diagonal;
-    }
-    "p_rgh.*"
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-7;
+        relTol          0.1;
+    }""" if is_fluid else """    "(h|e).*"
     {
         solver          PCG;
         preconditioner  DIC;
         tolerance       1e-7;
+        relTol          0.1;
+    }"""
+
+    fvSolution_region = get_header("dictionary", "fvSolution") + f"""
+solvers
+{{
+    "rho.*"
+    {{
+        solver          diagonal;
+    }}
+    "p_rgh.*"
+    {{
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-7;
         relTol          0.01;
-    }
-    "(U|h|e|k|epsilon).*"
-    {
+    }}
+    "(U|k|epsilon).*"
+    {{
         solver          PBiCGStab;
         preconditioner  DILU;
         tolerance       1e-7;
         relTol          0.1;
-    }
-    "(G|I.*)"
-    {
+    }}
+{h_e_solver}
+    "G.*"
+    {{
+        solver          PCG;
+        preconditioner  DIC;
+        tolerance       1e-7;
+        relTol          0.1;
+    }}
+    "I.*"
+    {{
         solver          PBiCGStab;
         preconditioner  DILU;
         tolerance       1e-7;
         relTol          0.1;
-    }
-}
+    }}
+}}
 PIMPLE
-{
+{{
     nOuterCorrectors 2;
     nCorrectors      2;
     nNonOrthogonalCorrectors 0;
-}
+}}
 """
-write_file("system/fvSolution", fvSolution)
+    write_file(f"system/{region}/fvSolution", fvSolution_region)
 
-for region in regions:
-    write_file(f"system/{region}/fvSchemes", fvSchemes)
-    write_file(f"system/{region}/fvSolution", fvSolution)
+# Global fvSolution (just a dummy for top-level utilities if needed, using fluid one)
+write_file("system/fvSolution", fvSolution_region)
+
 
 
 
