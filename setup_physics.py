@@ -38,9 +38,11 @@ startFrom       startTime;
 startTime       0;
 stopAt          endTime;
 endTime         10; // short for testing
-deltaT          0.01;
+deltaT          1e-5;
+maxCo           1.0;
+maxDi           1.0;
 writeControl    adjustableRunTime;
-writeInterval   1;
+writeInterval   0.1;
 purgeWrite      0;
 writeFormat     ascii;
 writePrecision  6;
@@ -154,6 +156,8 @@ PIMPLE
     nOuterCorrectors 2;
     nCorrectors      2;
     nNonOrthogonalCorrectors 0;
+    pRefCell         0;
+    pRefValue        100000;
 }}
 """
     write_file(f"system/{region}/fvSolution", fvSolution_region)
@@ -225,10 +229,10 @@ thermoType
     type            heSolidThermo;
     mixture         pureMixture;
     transport       constIso;
-    thermo          hConst;
+    thermo          eConst;
     equationOfState rhoConst;
     specie          specie;
-    energy          sensibleEnthalpy;
+    energy          sensibleInternalEnergy;
 }}
 mixture
 {{
@@ -268,7 +272,7 @@ heaterSource
     selectionMode   all;
     sources
     {
-        h           (20317665 0);
+        e           (20317665 0);
     }
 }
 """
