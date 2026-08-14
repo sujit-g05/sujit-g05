@@ -224,7 +224,7 @@ thermoType
 {{
     type            heSolidThermo;
     mixture         pureMixture;
-    transport       const;
+    transport       constIso;
     thermo          hConst;
     equationOfState rhoConst;
     specie          specie;
