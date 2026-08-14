@@ -187,10 +187,10 @@ startFrom       startTime;
 startTime       0;
 stopAt          endTime;
 endTime         600;
-deltaT          0.001;
+deltaT          0.1;
 adjustTimeStep  yes;
-maxCo           1.0;
-maxAlphaCo      1.0;
+maxCo           50.0;
+maxAlphaCo      50.0;
 writeControl    timeStep;
 writeInterval   1000;
 purgeWrite      0;
@@ -333,7 +333,7 @@ solvers {
     "q.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
-    nOuterCorrectors 1;
+    nOuterCorrectors 2;
     nCorrectors      2;
     nNonOrthogonalCorrectors 0;
 }
@@ -350,7 +350,7 @@ solvers {
     "q.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
-    nOuterCorrectors 1;
+    nOuterCorrectors 2;
     nCorrectors      2;
     nNonOrthogonalCorrectors 0;
     pRefCell         0;

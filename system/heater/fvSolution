@@ -19,7 +19,7 @@ solvers {
     "q.*" { solver PCG; preconditioner DIC; tolerance 1e-5; relTol 0; }
 }
 PIMPLE {
-    nOuterCorrectors 1;
+    nOuterCorrectors 2;
     nCorrectors      2;
     nNonOrthogonalCorrectors 0;
 }
