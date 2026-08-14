@@ -31,6 +31,10 @@ mixture
         nMoles      1;
         molWeight   12; // dummy
     }
+    equationOfState
+    {
+        rho         7250;
+    }
     transport
     {
         kappa       11;
@@ -38,7 +42,6 @@ mixture
     thermodynamics
     {
         Hf          0;
-        Cp          460;
-        rho         7250;
+        Cv          460;
     }
 }

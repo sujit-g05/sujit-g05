@@ -16,7 +16,7 @@ FoamFile
 
 application     foamMultiRun;
 startFrom       startTime;
-startTime       0;
+startTime       1000;
 stopAt          endTime;
 endTime         10; // short for testing
 deltaT          1e-5;
@@ -24,7 +24,7 @@ maxCo           1.0;
 maxDi           1.0;
 writeControl    adjustableRunTime;
 writeInterval   0.1;
-purgeWrite      0;
+purgeWrite       1000;
 writeFormat     ascii;
 writePrecision  6;
 writeCompression off;

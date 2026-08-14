@@ -27,8 +27,8 @@ fvDOMCoeffs
 absorptionEmissionModel constantAbsorptionEmission;
 constantAbsorptionEmissionCoeffs
 {
-    a       0;
-    e       0;
+    a       0.01;
+    e       0.01;
     E       0;
 }
 scatterModel none;

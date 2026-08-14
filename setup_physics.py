@@ -35,7 +35,7 @@ FoamFile
 controlDict = get_header("dictionary", "controlDict") + """
 application     foamMultiRun;
 startFrom       startTime;
-startTime       0;
+startTime       1000;
 stopAt          endTime;
 endTime         10; // short for testing
 deltaT          1e-5;
@@ -43,7 +43,7 @@ maxCo           1.0;
 maxDi           1.0;
 writeControl    adjustableRunTime;
 writeInterval   0.1;
-purgeWrite      0;
+purgeWrite       1000;
 writeFormat     ascii;
 writePrecision  6;
 writeCompression off;
@@ -71,7 +71,11 @@ functions
 """
 write_file("system/controlDict", controlDict)
 
-fvSchemes = get_header("dictionary", "fvSchemes") + """
+
+for region in regions:
+    is_fluid = region in fluids
+    if is_fluid:
+        fvSchemes = get_header("dictionary", "fvSchemes") + """
 ddtSchemes { default Euler; }
 gradSchemes { default Gauss linear; }
 divSchemes {
@@ -91,11 +95,21 @@ interpolationSchemes { default linear; }
 snGradSchemes { default orthogonal; }
 wallDist { method meshWave; }
 """
-write_file("system/fvSchemes", fvSchemes)
+    else:
+        fvSchemes = get_header("dictionary", "fvSchemes") + """
+ddtSchemes { default Euler; }
+gradSchemes { default Gauss linear; }
+divSchemes {
+    default none;
+    div(I) Gauss upwind;
+    div(ji,I) Gauss upwind;
+}
+laplacianSchemes { default Gauss linear orthogonal; }
+interpolationSchemes { default linear; }
+snGradSchemes { default orthogonal; }
+wallDist { method meshWave; }
+"""
 
-
-
-for region in regions:
     write_file(f"system/{region}/fvSchemes", fvSchemes)
     is_fluid = region in fluids
 
@@ -216,7 +230,7 @@ RAS
     printCoeffs     on;
 }
 """
-        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       0;\n    e       0;\n    E       0;\n}\nscatterModel none;\n'
+        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       0.01;\n    e       0.01;\n    E       0;\n}\nscatterModel none;\n'
     else:
         # solids
         if region == 'heater':
@@ -241,6 +255,10 @@ mixture
         nMoles      1;
         molWeight   12; // dummy
     }}
+    equationOfState
+    {{
+        rho         {rho};
+    }}
     transport
     {{
         kappa       {k};
@@ -248,13 +266,12 @@ mixture
     thermodynamics
     {{
         Hf          0;
-        Cp          {cp};
-        rho         {rho};
+        Cv          {cp};
     }}
 }}
 """
         turb = ""
-        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       0;\n    e       0;\n    E       0;\n}\nscatterModel none;\n'
+        rad = 'radiation on;\nradiationModel fvDOM;\n\nfvDOMCoeffs\n{\n    nPhi        2;\n    nTheta      2;\n    tolerance   1e-3;\n    maxIter     10;\n}\n\nabsorptionEmissionModel constantAbsorptionEmission;\nconstantAbsorptionEmissionCoeffs\n{\n    a       1000;\n    e       1000;\n    E       0;\n}\nscatterModel none;\n'
 
     write_file(f"constant/{region}/thermophysicalProperties", get_header("dictionary", "thermophysicalProperties") + thermo)
     write_file(f"constant/{region}/radiationProperties", get_header("dictionary", "radiationProperties") + rad)

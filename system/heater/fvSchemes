@@ -18,13 +18,6 @@ ddtSchemes { default Euler; }
 gradSchemes { default Gauss linear; }
 divSchemes {
     default none;
-    div(phi,U) Gauss upwind;
-    div(phi,K) Gauss upwind;
-    div(phi,h) Gauss upwind;
-    div(phi,e) Gauss upwind;
-    div(phi,k) Gauss upwind;
-    div(phi,epsilon) Gauss upwind;
-    div(((rho*nuEff)*dev2(T(grad(U))))) Gauss linear;
     div(I) Gauss upwind;
     div(ji,I) Gauss upwind;
 }
